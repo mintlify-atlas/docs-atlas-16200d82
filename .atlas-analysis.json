@@ -1,0 +1,93 @@
+{
+  "projectType": "saas",
+  "projectName": "Galey Cloud",
+  "projectDescription": "A cloud-based photo gallery application for organizing and managing your personal photo collection with albums and cloud storage.",
+  "theme": "almond",
+  "primaryColor": "#8B5CF6",
+  "lightColor": "#A78BFA",
+  "darkColor": "#6D28D9",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/gallery",
+              "features/albums",
+              "features/photos",
+              "features/authentication"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/uploading",
+              "guide/organizing",
+              "guide/searching"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/introduction",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/photos",
+              "api/albums"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Deployment",
+        "groups": [
+          {
+            "group": "Setup",
+            "pages": [
+              "deployment/overview",
+              "deployment/supabase",
+              "deployment/vercel",
+              "deployment/environment"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "User authentication with Supabase",
+    "Cloud photo storage with Vercel Blob",
+    "Album organization and management",
+    "Photo upload with drag-and-drop",
+    "Search and filter functionality",
+    "Responsive UI with dark mode support"
+  ],
+  "publicApiSurface": [
+    "GET /api/photos - List user photos",
+    "POST /api/photos/upload - Upload photos",
+    "DELETE /api/photos/delete - Delete photos",
+    "PATCH /api/photos/move - Move photos between albums",
+    "PATCH /api/photos/dimensions - Update photo dimensions",
+    "GET /api/albums - List user albums",
+    "POST /api/albums - Create new album",
+    "DELETE /api/albums - Delete album"
+  ]
+}
