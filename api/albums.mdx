@@ -1,0 +1,296 @@
+---
+title: 'Albums API'
+description: 'Endpoints for managing photo albums'
+---
+
+## List Albums
+
+<CodeGroup>
+```bash GET /api/albums
+curl -X GET https://your-domain.com/api/albums \
+  -H "Cookie: your-session-cookies"
+```
+</CodeGroup>
+
+Retrieves all albums for the authenticated user, ordered by creation date (oldest first).
+
+### Response
+
+<ResponseField name="albums" type="array">
+  Array of album objects
+
+  <Expandable title="Album Object">
+    <ResponseField name="id" type="string" required>
+      Unique identifier for the album
+    </ResponseField>
+
+    <ResponseField name="user_id" type="string" required>
+      ID of the user who owns the album
+    </ResponseField>
+
+    <ResponseField name="name" type="string" required>
+      Name of the album
+    </ResponseField>
+
+    <ResponseField name="created_at" type="string" required>
+      ISO 8601 timestamp when the album was created
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Response Example
+
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "user_id": "user-123",
+    "name": "Vacation 2026",
+    "created_at": "2026-03-01T08:00:00.000Z"
+  },
+  {
+    "id": "223e4567-e89b-12d3-a456-426614174001",
+    "user_id": "user-123",
+    "name": "Family Photos",
+    "created_at": "2026-03-02T14:30:00.000Z"
+  }
+]
+```
+
+### Error Responses
+
+<ResponseField name="error" type="object">
+  <Expandable title="401 Unauthorized">
+    ```json
+    {
+      "error": "No autorizado"
+    }
+    ```
+    User is not authenticated.
+  </Expandable>
+
+  <Expandable title="500 Internal Server Error">
+    ```json
+    {
+      "error": "Error al obtener albums"
+    }
+    ```
+    Server error occurred while fetching albums.
+  </Expandable>
+</ResponseField>
+
+---
+
+## Create Album
+
+<CodeGroup>
+```bash POST /api/albums
+curl -X POST https://your-domain.com/api/albums \
+  -H "Cookie: your-session-cookies" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Vacation 2026"}'
+```
+</CodeGroup>
+
+Creates a new album for the authenticated user.
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  The name of the album. Must be a non-empty string. Leading and trailing whitespace will be trimmed.
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "name": "Vacation 2026"
+}
+```
+
+### Response
+
+Returns the created album object:
+
+<ResponseField name="album" type="object">
+  <Expandable title="Album Object">
+    <ResponseField name="id" type="string" required>
+      Unique identifier for the created album
+    </ResponseField>
+
+    <ResponseField name="user_id" type="string" required>
+      ID of the user who owns the album
+    </ResponseField>
+
+    <ResponseField name="name" type="string" required>
+      Name of the album (trimmed)
+    </ResponseField>
+
+    <ResponseField name="created_at" type="string" required>
+      ISO 8601 timestamp when the album was created
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_id": "user-123",
+  "name": "Vacation 2026",
+  "created_at": "2026-03-04T10:30:00.000Z"
+}
+```
+
+### Error Responses
+
+<ResponseField name="error" type="object">
+  <Expandable title="400 Bad Request">
+    ```json
+    {
+      "error": "Nombre requerido"
+    }
+    ```
+    Album name was not provided or is empty/whitespace only.
+  </Expandable>
+
+  <Expandable title="401 Unauthorized">
+    ```json
+    {
+      "error": "No autorizado"
+    }
+    ```
+    User is not authenticated.
+  </Expandable>
+
+  <Expandable title="500 Internal Server Error">
+    ```json
+    {
+      "error": "Error al crear album"
+    }
+    ```
+    Server error occurred while creating the album.
+  </Expandable>
+</ResponseField>
+
+---
+
+## Delete Album
+
+<CodeGroup>
+```bash DELETE /api/albums
+curl -X DELETE https://your-domain.com/api/albums \
+  -H "Cookie: your-session-cookies" \
+  -H "Content-Type: application/json" \
+  -d '{"id": "123e4567-e89b-12d3-a456-426614174000"}'
+```
+</CodeGroup>
+
+Deletes an album. All photos in the album are moved to "no album" (album_id set to null) before the album is deleted.
+
+<Info>
+Deleting an album does not delete the photos it contains. Photos are automatically moved out of the album and remain in the user's photo library.
+</Info>
+
+### Request Body
+
+<ParamField body="id" type="string" required>
+  The unique identifier of the album to delete
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Returns true when deletion is successful
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "success": true
+}
+```
+
+### Behavior
+
+When an album is deleted:
+
+1. All photos in the album have their `album_id` set to `null`
+2. The album record is removed from the database
+3. Photos remain in the user's library and can be viewed in "All Photos"
+
+### Error Responses
+
+<ResponseField name="error" type="object">
+  <Expandable title="400 Bad Request">
+    ```json
+    {
+      "error": "No se proporciono ID"
+    }
+    ```
+    Album ID was not provided.
+  </Expandable>
+
+  <Expandable title="401 Unauthorized">
+    ```json
+    {
+      "error": "No autorizado"
+    }
+    ```
+    User is not authenticated.
+  </Expandable>
+
+  <Expandable title="500 Internal Server Error">
+    ```json
+    {
+      "error": "Error al eliminar album"
+    }
+    ```
+    Server error occurred while deleting the album.
+  </Expandable>
+</ResponseField>
+
+## Album Management
+
+### Moving Photos to Albums
+
+To add photos to an album, use the [Move Photo](/api/photos#move-photo) endpoint:
+
+```bash
+curl -X PATCH https://your-domain.com/api/photos/move \
+  -H "Cookie: your-session-cookies" \
+  -H "Content-Type: application/json" \
+  -d '{"id": "photo-id", "album_id": "album-id"}'
+```
+
+### Removing Photos from Albums
+
+To remove photos from an album without deleting them:
+
+```bash
+curl -X PATCH https://your-domain.com/api/photos/move \
+  -H "Cookie: your-session-cookies" \
+  -H "Content-Type: application/json" \
+  -d '{"id": "photo-id", "album_id": null}'
+```
+
+### Uploading Directly to an Album
+
+When uploading a photo, you can specify the album:
+
+```bash
+curl -X POST https://your-domain.com/api/photos/upload \
+  -H "Cookie: your-session-cookies" \
+  -F "file=@photo.jpg" \
+  -F "album_id=album-id"
+```

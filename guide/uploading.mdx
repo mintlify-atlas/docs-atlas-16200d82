@@ -1,0 +1,211 @@
+---
+title: 'Uploading Photos'
+description: 'Learn how to upload and manage your photos in Galey Cloud'
+icon: 'upload'
+---
+
+Galey Cloud makes it easy to upload your photos to the cloud and organize them into albums. This guide will walk you through everything you need to know about uploading photos.
+
+## How to Upload Photos
+
+There are two convenient ways to upload photos to Galey Cloud:
+
+<Steps>
+  <Step title="Using the Upload Button">
+    Click the **Upload** button in the top-right corner of the photo grid.
+    
+    1. Click the "Upload" button (with the upload icon)
+    2. Select one or multiple photos from your device
+    3. Wait for the upload to complete
+    
+    The button will show "Subiendo..." (Uploading...) while your photos are being uploaded.
+  </Step>
+  
+  <Step title="Using Drag and Drop">
+    Simply drag photos from your computer and drop them anywhere on the photo grid area.
+    
+    1. Select photos from your file explorer
+    2. Drag them over the Galey Cloud window
+    3. The background will highlight to indicate a valid drop zone
+    4. Release to upload
+    
+    This is the fastest way to upload multiple photos at once.
+  </Step>
+</Steps>
+
+## Supported File Formats
+
+Galey Cloud accepts all common image formats, including:
+
+- **JPEG/JPG** - The most common photo format
+- **PNG** - Great for screenshots and graphics
+- **GIF** - Animated and static images
+- **WebP** - Modern, efficient image format
+- **BMP** - Bitmap images
+- **SVG** - Vector graphics
+
+<Note>
+The upload system accepts any file with an image MIME type. If you encounter issues with a specific format, please check that it's a valid image file.
+</Note>
+
+## Upload Progress and Feedback
+
+Galey Cloud provides clear feedback during the upload process:
+
+### Upload Status
+
+- **Upload Button**: Changes from "Subir" to "Subiendo..." while uploading
+- **Button State**: The upload button is disabled during upload to prevent duplicate uploads
+- **Drag Indicator**: The photo grid background highlights when dragging files over it
+
+### Success Notifications
+
+When your upload completes successfully, you'll see a toast notification:
+
+- Single photo: "1 foto subida correctamente"
+- Multiple photos: "X fotos subidas correctamente"
+
+The newly uploaded photos will automatically appear in your gallery.
+
+### Error Handling
+
+If an upload fails, you'll receive an error notification with details about what went wrong. Common error messages include:
+
+- **"No autorizado"** - You need to log in again
+- **"No se proporciono archivo"** - No file was selected
+- **"Error al subir"** - General upload error
+
+## Uploading to Specific Albums
+
+You can upload photos directly into an album:
+
+<Steps>
+  <Step title="Select an Album">
+    Click on the album in the left sidebar where you want to upload photos.
+  </Step>
+  
+  <Step title="Upload Photos">
+    Use either the Upload button or drag-and-drop method while the album is selected.
+  </Step>
+  
+  <Step title="Verify Location">
+    The photos will automatically be placed in the selected album.
+  </Step>
+</Steps>
+
+<Tip>
+If you want to upload photos without assigning them to an album, select "Todas las fotos" (All Photos) in the sidebar before uploading.
+</Tip>
+
+## Batch Uploads
+
+Galey Cloud supports uploading multiple photos at once:
+
+### Using File Selection
+
+1. Click the Upload button
+2. Hold **Ctrl** (Windows/Linux) or **Cmd** (Mac) to select multiple files
+3. Or use **Shift** to select a range of files
+4. Click "Open" to start the batch upload
+
+### Using Drag and Drop
+
+1. Select multiple files in your file explorer
+2. Drag all selected files to Galey Cloud
+3. Drop them on the photo grid
+
+All photos in a batch upload are processed simultaneously for faster uploads.
+
+<Note>
+Each photo is uploaded independently. If one photo fails, the others will continue uploading successfully.
+</Note>
+
+## File Information Captured
+
+When you upload a photo, Galey Cloud automatically captures and stores:
+
+- **File name** - Original filename from your device
+- **File size** - Size in bytes
+- **File type** - MIME type (e.g., image/jpeg)
+- **Dimensions** - Width and height in pixels (calculated after upload)
+- **Upload date** - Timestamp of when the photo was uploaded
+- **Album** - Which album the photo belongs to (if any)
+
+## Troubleshooting Common Upload Issues
+
+<AccordionGroup>
+  <Accordion title="Upload button is disabled">
+    The upload button disables while an upload is in progress. Wait for the current upload to complete before starting a new one.
+    
+    If it remains disabled after the upload completes, try refreshing the page.
+  </Accordion>
+  
+  <Accordion title="Upload fails with 'No autorizado' error">
+    This means your session has expired. You need to log in again:
+    
+    1. Click "Cerrar sesion" (Log out) in the sidebar
+    2. Log in with your credentials
+    3. Try uploading again
+  </Accordion>
+  
+  <Accordion title="Photos don't appear after uploading">
+    Try these steps:
+    
+    1. Refresh the page to reload the gallery
+    2. Check if you have filters or album selections applied
+    3. Click "Todas las fotos" to see all uploaded photos
+  </Accordion>
+  
+  <Accordion title="Drag and drop doesn't work">
+    Make sure you're dragging image files, not folders or other file types. The drag indicator (background highlight) should appear when dragging valid image files.
+  </Accordion>
+  
+  <Accordion title="Upload is very slow">
+    Upload speed depends on:
+    
+    - Your internet connection speed
+    - File sizes (larger photos take longer)
+    - Number of files being uploaded simultaneously
+    
+    For faster uploads, consider:
+    - Uploading smaller batches
+    - Compressing large images before upload
+    - Using a faster internet connection
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Name Files Descriptively" icon="tag">
+    Use meaningful filenames before uploading to make photos easier to search and identify later.
+  </Card>
+  
+  <Card title="Organize as You Upload" icon="folder">
+    Create albums first, then upload directly to them. This saves time reorganizing later.
+  </Card>
+  
+  <Card title="Upload in Batches" icon="layer-group">
+    Upload related photos together in batches. This makes it easier to organize them into albums.
+  </Card>
+  
+  <Card title="Check File Sizes" icon="file">
+    Larger files take longer to upload and use more storage. Consider optimizing very large images.
+  </Card>
+</CardGroup>
+
+<Tip>
+After uploading, photos can be moved between albums, renamed, or deleted at any time. Don't worry about getting everything perfect during upload.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Organizing Photos" icon="folder-tree" href="/guide/organizing">
+    Learn how to create albums and organize your photos
+  </Card>
+  
+  <Card title="Searching Photos" icon="search" href="/guide/searching">
+    Discover how to find and filter your photos quickly
+  </Card>
+</CardGroup>

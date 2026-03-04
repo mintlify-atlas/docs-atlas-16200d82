@@ -1,97 +1,188 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative py-20 overflow-hidden bg-gradient-to-br from-[#8B5CF6] via-[#7C3AED] to-[#6D28D9]">
+  <div className="max-w-6xl mx-auto px-6 lg:px-8">
+    <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="text-center lg:text-left">
+        <h1 className="text-5xl lg:text-6xl font-bold text-white mb-6">
+          Welcome to Galey Cloud
+        </h1>
+        <p className="text-xl text-white/90 mb-8 max-w-2xl">
+          Your personal cloud photo gallery. Organize, store, and manage your photo collection with powerful albums, intelligent search, and secure cloud storage.
+        </p>
+        <div className="flex flex-wrap gap-4 justify-center lg:justify-start">
+          <a
+            href="/quickstart"
+            className="inline-flex items-center px-6 py-3 rounded-lg bg-white text-[#8B5CF6] font-semibold hover:bg-gray-100 transition-colors"
+          >
+            Get Started
+          </a>
+          <a
+            href="/api/introduction"
+            className="inline-flex items-center px-6 py-3 rounded-lg border-2 border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20 transition-colors"
+          >
+            View API Reference
+          </a>
+        </div>
+      </div>
+      <div className="hidden lg:block">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent rounded-2xl blur-2xl"></div>
+          <div className="relative p-8 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="aspect-square rounded-lg bg-white/20 backdrop-blur-sm"></div>
+              <div className="aspect-square rounded-lg bg-white/20 backdrop-blur-sm"></div>
+              <div className="aspect-square rounded-lg bg-white/20 backdrop-blur-sm"></div>
+              <div className="aspect-square rounded-lg bg-white/20 backdrop-blur-sm"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Quick Start
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">
+      Get up and running with Galey Cloud in just a few steps
+    </p>
+  </div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+  <Steps>
+    <Step title="Create Your Account">
+      Sign up for a Galey Cloud account and authenticate using Supabase. Your photos are protected with row-level security, ensuring only you can access your collection.
+      
+      ```bash
+      # Navigate to the sign-up page
+      https://your-app.vercel.app/auth/sign-up
+      ```
+    </Step>
+    
+    <Step title="Upload Your First Photos">
+      Start uploading photos using drag-and-drop or the upload button. Photos are automatically stored in Vercel Blob storage with optimized delivery.
+      
+      ```typescript
+      // Upload photos via API
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      await fetch('/api/photos/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      ```
+    </Step>
+    
+    <Step title="Organize with Albums">
+      Create albums to organize your photos by events, dates, or themes. Move photos between albums with a simple interface.
+      
+      <Note>
+        Albums help you keep your photo collection organized and easy to navigate.
+      </Note>
+    </Step>
+    
+    <Step title="Search and Explore">
+      Use the search functionality to quickly find photos by filename. Your gallery is optimized for fast browsing with responsive layouts.
+    </Step>
+  </Steps>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Explore Key Features
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">
+      Everything you need to manage your photo collection
+    </p>
+  </div>
 
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
+  <CardGroup cols={2}>
     <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      title="Photo Gallery"
+      icon="images"
+      href="/features/gallery"
+    >
+      Browse your photos in a beautiful, responsive grid layout with lightbox viewing and metadata display.
+    </Card>
+    <Card
+      title="Album Management"
+      icon="folder"
+      href="/features/albums"
+    >
+      Create, organize, and manage albums to keep your photos structured and accessible.
+    </Card>
+    <Card
+      title="Cloud Storage"
+      icon="cloud"
+      href="/features/photos"
+    >
+      Secure photo storage powered by Vercel Blob with automatic optimization and fast delivery.
+    </Card>
+    <Card
+      title="Authentication"
+      icon="lock"
+      href="/features/authentication"
+    >
+      Secure user authentication with Supabase, ensuring your photos remain private and protected.
+    </Card>
+  </CardGroup>
+</div>
 
-## Create beautiful pages
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+      Developer Resources
+    </h2>
+    <p className="text-lg text-gray-600 dark:text-gray-400">
+      Learn how to integrate and extend Galey Cloud
+    </p>
+  </div>
 
-Everything you need to create world-class documentation.
+  <CardGroup cols={3}>
+    <Card
+      title="API Reference"
+      icon="code"
+      href="/api/introduction"
+    >
+      Complete API documentation for photos and albums endpoints.
+    </Card>
+    <Card
+      title="Deployment Guide"
+      icon="rocket"
+      href="/deployment/overview"
+    >
+      Step-by-step instructions for deploying your own instance.
+    </Card>
+    <Card
+      title="User Guide"
+      icon="book"
+      href="/guide/uploading"
+    >
+      Learn best practices for organizing and managing your photos.
+    </Card>
+  </CardGroup>
+</div>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-20 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9] p-8 lg:p-12 text-center">
+    <h2 className="text-3xl font-bold text-white mb-4">
+      Ready to Get Started?
+    </h2>
+    <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+      Deploy your own Galey Cloud instance and start organizing your photo collection today.
+    </p>
+    <a
+      href="/quickstart"
+      className="inline-flex items-center px-8 py-4 rounded-lg bg-white text-[#8B5CF6] font-semibold hover:bg-gray-100 transition-colors"
+    >
+      View Quickstart Guide
+    </a>
+  </div>
+</div>

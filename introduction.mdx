@@ -1,0 +1,159 @@
+---
+title: "Introduction"
+description: "Welcome to Galey Cloud - Your personal cloud photo gallery solution"
+---
+
+## What is Galey Cloud?
+
+Galey Cloud is a modern, secure cloud-based photo gallery application that allows you to store, organize, and manage your photo collections online. Built with cutting-edge web technologies, it provides a seamless experience for uploading, browsing, and organizing your precious memories.
+
+The application combines the power of Next.js for a fast, responsive frontend with Supabase for secure authentication and data management, and Vercel Blob for scalable cloud storage.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Secure Authentication" icon="lock">
+    User authentication powered by Supabase Auth with email/password sign-up and login
+  </Card>
+  <Card title="Cloud Storage" icon="cloud">
+    Unlimited photo storage using Vercel Blob with automatic file optimization
+  </Card>
+  <Card title="Album Organization" icon="folder">
+    Create custom albums to organize your photos by events, dates, or categories
+  </Card>
+  <Card title="Smart Search" icon="magnifying-glass">
+    Quickly find photos by filename with real-time search functionality
+  </Card>
+  <Card title="Dark Mode" icon="moon">
+    Built-in theme support with automatic dark/light mode switching
+  </Card>
+  <Card title="Responsive Design" icon="mobile">
+    Beautiful, responsive interface that works seamlessly on desktop and mobile devices
+  </Card>
+</CardGroup>
+
+## Architecture Overview
+
+Galey Cloud is built on a modern, scalable architecture:
+
+<Steps>
+  <Step title="Frontend Framework">
+    **Next.js 16** with React 19 provides a fast, server-rendered application with optimal performance and SEO
+  </Step>
+  
+  <Step title="Authentication & Database">
+    **Supabase** handles user authentication and stores metadata (albums, photo references) in PostgreSQL with Row Level Security
+  </Step>
+  
+  <Step title="File Storage">
+    **Vercel Blob** stores the actual photo files with public access URLs and automatic CDN distribution
+  </Step>
+  
+  <Step title="UI Components">
+    **Radix UI** and **Tailwind CSS** power the accessible, customizable component library
+  </Step>
+</Steps>
+
+### Technology Stack
+
+```json
+{
+  "frontend": {
+    "framework": "Next.js 16.1.6",
+    "runtime": "React 19.2.4",
+    "styling": "Tailwind CSS 4.2.0",
+    "components": "Radix UI"
+  },
+  "backend": {
+    "database": "Supabase (PostgreSQL)",
+    "auth": "Supabase Auth",
+    "storage": "Vercel Blob"
+  },
+  "features": {
+    "forms": "React Hook Form + Zod",
+    "state": "SWR",
+    "theme": "next-themes",
+    "notifications": "Sonner"
+  }
+}
+```
+
+## How It Works
+
+<Info>
+  Galey Cloud separates metadata from actual file storage for optimal performance and scalability.
+</Info>
+
+1. **User uploads a photo** → File is sent to Vercel Blob storage
+2. **Vercel Blob returns a public URL** → URL is stored in Supabase database
+3. **Photo metadata is saved** → Filename, size, dimensions, and album association
+4. **User views gallery** → Photos are fetched from database and displayed from CDN
+5. **User organizes photos** → Album associations are updated in database only
+
+### Data Model
+
+The application uses two main database tables:
+
+<CodeGroup>
+```sql Albums Table
+CREATE TABLE public.albums (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+```sql Photos Table
+CREATE TABLE public.photos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id),
+  album_id UUID REFERENCES public.albums(id),
+  blob_url TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  file_size BIGINT,
+  file_type TEXT,
+  width INT,
+  height INT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+</CodeGroup>
+
+<Note>
+  All tables use Row Level Security (RLS) to ensure users can only access their own data.
+</Note>
+
+## Use Cases
+
+Galey Cloud is perfect for:
+
+- **Personal Photo Collections** - Store and organize family photos, vacation memories, and special moments
+- **Event Photography** - Organize photos from weddings, parties, or corporate events into albums
+- **Portfolio Management** - Photographers can showcase their work in organized collections
+- **Team Collaboration** - Share and organize project photos with team members (with future sharing features)
+- **Photo Backup** - Securely backup photos from your devices to the cloud
+
+## Security & Privacy
+
+<Warning>
+  All user data is protected with industry-standard security measures.
+</Warning>
+
+- **Row Level Security (RLS)** - Database policies ensure users only see their own photos
+- **Secure Authentication** - Passwords are hashed and managed by Supabase Auth
+- **Private by Default** - Photos are associated with user accounts and require authentication
+- **HTTPS Everywhere** - All data transmission is encrypted in transit
+
+## What's Next?
+
+Ready to get started with Galey Cloud? Continue to the [Quickstart](/quickstart) guide to set up your own instance.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get up and running in 10 minutes
+  </Card>
+  <Card title="Deployment Guide" icon="gear" href="/deployment/environment">
+    Learn about environment variables and settings
+  </Card>
+</CardGroup>

@@ -1,0 +1,411 @@
+---
+title: Vercel Deployment
+description: Deploy Galey Cloud to Vercel with Blob storage
+---
+
+This guide covers deploying your Galey Cloud application to Vercel, including configuring Vercel Blob for photo storage.
+
+## Prerequisites
+
+Before deploying to Vercel, ensure you have:
+
+- Completed [Supabase Setup](/deployment/supabase)
+- Your Supabase API keys ready
+- Source code in a GitHub repository
+- Gathered all [environment variables](/deployment/environment)
+
+## Connecting Your Repository
+
+<Steps>
+  <Step title="Sign in to Vercel">
+    Go to [vercel.com](https://vercel.com) and sign in with GitHub
+  </Step>
+  
+  <Step title="Import project">
+    1. Click **"Add New..."** → **"Project"**
+    2. Select your GitHub repository from the list
+    3. If not listed, click **"Adjust GitHub App Permissions"** to grant access
+  </Step>
+  
+  <Step title="Configure project">
+    Vercel will auto-detect Next.js. Verify the settings:
+    
+    - **Framework Preset**: Next.js
+    - **Root Directory**: `./` (or adjust if your app is in a subdirectory)
+    - **Build Command**: `next build` (auto-detected)
+    - **Output Directory**: `.next` (auto-detected)
+    - **Install Command**: `npm install` (or `pnpm install` if using pnpm)
+  </Step>
+</Steps>
+
+## Configuring Build Settings
+
+Galey Cloud's `next.config.mjs` includes specific configuration:
+
+```javascript next.config.mjs
+const nextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  images: {
+    unoptimized: true,
+  },
+}
+
+export default nextConfig
+```
+
+<Warning>
+  `ignoreBuildErrors: true` is enabled. For production, fix TypeScript errors and remove this flag to catch type issues during build.
+</Warning>
+
+<Info>
+  `unoptimized: true` disables Next.js image optimization. This is set because images are stored in Vercel Blob and served via CDN. If you need image optimization, consider using Next.js Image Optimization API or a third-party service.
+</Info>
+
+### Adjusting Build Settings (Optional)
+
+If you need to customize build settings:
+
+1. In your Vercel project dashboard, go to **Settings** → **General**
+2. Scroll to **Build & Development Settings**
+3. Adjust as needed:
+   - **Framework Preset**: Next.js
+   - **Build Command**: `next build`
+   - **Output Directory**: `.next`
+   - **Install Command**: Use default or specify `pnpm install`
+
+## Setting Up Vercel Blob Storage
+
+Galey Cloud uses Vercel Blob to store uploaded photos.
+
+<Steps>
+  <Step title="Enable Blob storage">
+    1. In your Vercel project dashboard, go to **Storage**
+    2. Click **"Create Database"** or **"Connect Store"**
+    3. Select **"Blob"**
+    4. Choose a store name (e.g., "galey-photos")
+    5. Click **"Create"**
+  </Step>
+  
+  <Step title="Connect to project">
+    1. After creation, click **"Connect to Project"**
+    2. Select your Galey Cloud project
+    3. Vercel will automatically add the required environment variables:
+       - `BLOB_READ_WRITE_TOKEN`
+    
+    <Check>
+      The environment variable will be available to your project immediately.
+    </Check>
+  </Step>
+  
+  <Step title="Verify integration">
+    1. Go to **Settings** → **Environment Variables**
+    2. Confirm `BLOB_READ_WRITE_TOKEN` is present
+    3. This token is automatically used by `@vercel/blob` package
+  </Step>
+</Steps>
+
+### How Blob Storage Works
+
+Galey Cloud uses Vercel Blob in two API routes:
+
+**Upload Photos** (`app/api/photos/upload/route.ts`):
+```typescript
+import { put } from '@vercel/blob'
+
+const blob = await put(`photos/${user.id}/${Date.now()}-${file.name}`, file, {
+  access: 'public',
+})
+// Returns: { url: 'https://xxx.public.blob.vercel-storage.com/...' }
+```
+
+**Delete Photos** (`app/api/photos/delete/route.ts`):
+```typescript
+import { del } from '@vercel/blob'
+
+await del(photo.blob_url)
+```
+
+<Info>
+  Photos are stored with `access: 'public'`, meaning URLs are publicly accessible without authentication. The blob URL is stored in Supabase, and RLS policies ensure users can only access their own photo metadata.
+</Info>
+
+## Environment Variables Setup
+
+<Steps>
+  <Step title="Navigate to environment variables">
+    In your Vercel project dashboard, go to **Settings** → **Environment Variables**
+  </Step>
+  
+  <Step title="Add Supabase variables">
+    Add the following variables from your Supabase project:
+    
+    | Variable Name | Value | Environment |
+    |--------------|-------|-------------|
+    | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | Production, Preview, Development |
+    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key | Production, Preview, Development |
+    
+    <Info>
+      Select all three environments (Production, Preview, Development) to ensure the variables are available in all deployment contexts.
+    </Info>
+  </Step>
+  
+  <Step title="Add development redirect URL (optional)">
+    If you need a custom redirect URL for development:
+    
+    | Variable Name | Value | Environment |
+    |--------------|-------|-------------|
+    | `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL` | `http://localhost:3000/auth/callback` | Development only |
+  </Step>
+  
+  <Step title="Verify Blob token">
+    Confirm `BLOB_READ_WRITE_TOKEN` is already set (added automatically when you connected Blob storage)
+  </Step>
+</Steps>
+
+<Warning>
+  Never commit environment variables to your repository. Always configure them through Vercel's dashboard.
+</Warning>
+
+For a complete list of all environment variables, see [Environment Variables](/deployment/environment).
+
+## Deploy Your Application
+
+<Steps>
+  <Step title="Trigger deployment">
+    Click **"Deploy"** to start your first deployment
+    
+    Vercel will:
+    1. Clone your repository
+    2. Install dependencies
+    3. Run `next build`
+    4. Deploy to the edge network
+  </Step>
+  
+  <Step title="Monitor build">
+    Watch the build logs in real-time. The deployment typically takes 1-3 minutes.
+    
+    Common build output:
+    ```
+    [12:34:56.789] Cloning github.com/your-username/galey-cloud
+    [12:34:58.123] Installing dependencies...
+    [12:35:15.456] Running "next build"...
+    [12:35:45.789] Creating an optimized production build...
+    [12:36:12.345] Build completed
+    [12:36:15.678] Deploying...
+    [12:36:20.123] Deployment ready
+    ```
+  </Step>
+  
+  <Step title="Access your deployment">
+    Once deployed, Vercel provides:
+    - **Production URL**: `https://your-app.vercel.app`
+    - **Deployment URL**: Unique URL for this specific deployment
+    
+    Click the URL to visit your live application!
+  </Step>
+</Steps>
+
+## Domain Configuration
+
+Customize your deployment with a custom domain:
+
+<Steps>
+  <Step title="Add domain">
+    1. Go to **Settings** → **Domains**
+    2. Enter your custom domain (e.g., `galey.example.com`)
+    3. Click **"Add"**
+  </Step>
+  
+  <Step title="Configure DNS">
+    Vercel will provide DNS records to add to your domain registrar:
+    
+    **For apex domains** (example.com):
+    ```
+    A     @     76.76.21.21
+    ```
+    
+    **For subdomains** (galey.example.com):
+    ```
+    CNAME galey cname.vercel-dns.com
+    ```
+  </Step>
+  
+  <Step title="Update Supabase redirect URLs">
+    After adding your custom domain:
+    1. Go to your Supabase project → **Authentication** → **URL Configuration**
+    2. Add your custom domain to **Redirect URLs**:
+       ```
+       https://galey.example.com/auth/callback
+       ```
+    3. Update **Site URL** to your custom domain
+  </Step>
+  
+  <Step title="Verify SSL certificate">
+    Vercel automatically provisions an SSL certificate. Wait a few minutes, then verify:
+    - Visit `https://galey.example.com`
+    - Check for the lock icon in your browser
+  </Step>
+</Steps>
+
+## Automatic Deployments
+
+Vercel automatically deploys:
+
+- **Production**: Every push to your `main` or `master` branch
+- **Preview**: Every push to other branches and pull requests
+
+### Deployment Workflow
+
+```
+Git Push → Vercel Detects Change → Build → Deploy → Live
+```
+
+<Info>
+  Preview deployments are perfect for testing changes before merging to production. Each PR gets its own unique URL.
+</Info>
+
+### Disabling Auto-Deploy (Optional)
+
+To require manual deployments:
+
+1. Go to **Settings** → **Git**
+2. Under **Deploy Hooks**, you can configure when deployments trigger
+3. Disable **"Auto-deploy"** for specific branches if needed
+
+## Monitoring and Logs
+
+### Real-time Logs
+
+<Steps>
+  <Step title="Access runtime logs">
+    1. Go to your project dashboard
+    2. Click **"Runtime Logs"** in the top navigation
+    3. View real-time logs from your application
+  </Step>
+  
+  <Step title="Filter logs">
+    - Filter by deployment
+    - Search for specific messages
+    - View errors and warnings
+  </Step>
+</Steps>
+
+### Analytics
+
+Galey Cloud includes Vercel Analytics via `@vercel/analytics/next` (app/layout.tsx:3):
+
+```typescript
+import { Analytics } from '@vercel/analytics/next'
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="es">
+      <body>
+        {children}
+        <Analytics />
+      </body>
+    </html>
+  )
+}
+```
+
+<Steps>
+  <Step title="Enable Analytics">
+    1. Go to your project dashboard → **Analytics**
+    2. Analytics are automatically enabled for all Vercel projects
+    3. View page views, unique visitors, and performance metrics
+  </Step>
+  
+  <Step title="View insights">
+    - **Audience**: Visitor demographics and devices
+    - **Traffic**: Page views over time
+    - **Top pages**: Most visited routes
+    - **Referrers**: Traffic sources
+  </Step>
+</Steps>
+
+### Error Tracking
+
+Monitor API route errors:
+
+1. Check **Runtime Logs** for server-side errors
+2. Use browser DevTools console for client-side errors
+3. Consider integrating Sentry for advanced error tracking:
+   ```bash
+   npm install @sentry/nextjs
+   ```
+
+## Deployment Best Practices
+
+### Testing Before Deployment
+
+<Steps>
+  <Step title="Local build test">
+    Always test the production build locally:
+    ```bash
+    npm run build
+    npm run start
+    ```
+  </Step>
+  
+  <Step title="Fix TypeScript errors">
+    Before production, fix all TypeScript errors and remove `ignoreBuildErrors: true` from `next.config.mjs`
+  </Step>
+  
+  <Step title="Use preview deployments">
+    Test changes in preview deployments before merging to main branch
+  </Step>
+</Steps>
+
+### Environment Management
+
+- Use **Development** environment variables for local development
+- Use **Preview** for staging/testing branches
+- Use **Production** only for the main branch
+
+### Performance Optimization
+
+- Monitor **Web Vitals** in Vercel Analytics
+- Optimize large images before uploading
+- Use Vercel Edge Network for global performance
+- Consider enabling [Vercel Edge Functions](https://vercel.com/docs/functions/edge-functions) for latency-sensitive routes
+
+## Troubleshooting
+
+### Build fails with "Missing environment variables"
+
+- Verify all required environment variables are set in **Settings** → **Environment Variables**
+- Ensure variables are enabled for the correct environment (Production/Preview/Development)
+- Redeploy after adding variables
+
+### "Invalid Supabase credentials" errors
+
+- Double-check `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- Ensure there are no extra spaces or quotes
+- Verify Supabase project is active
+
+### Photo uploads fail
+
+- Check that Vercel Blob is connected and `BLOB_READ_WRITE_TOKEN` is set
+- Monitor **Runtime Logs** for upload errors
+- Verify file size limits (Vercel Blob free tier: 100MB per file)
+
+### Authentication redirects fail
+
+- Update Supabase **Redirect URLs** to include your Vercel domain
+- Check **Site URL** in Supabase matches your deployment URL
+- Ensure cookies are enabled
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="key" href="/deployment/environment">
+    Reference for all environment variables
+  </Card>
+  
+  <Card title="Deployment Overview" icon="book" href="/deployment/overview">
+    Return to deployment overview
+  </Card>
+</CardGroup>

@@ -1,0 +1,156 @@
+---
+title: 'API Overview'
+description: 'Introduction to the Galey Cloud API'
+---
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://your-domain.com/api
+```
+
+For local development:
+
+```
+http://localhost:3000/api
+```
+
+## Authentication
+
+The Galey Cloud API uses session-based authentication powered by Supabase. All API endpoints require authentication via HTTP-only cookies set during the login process.
+
+<Info>
+See the [Authentication](/api/authentication) page for detailed information on how to authenticate your requests.
+</Info>
+
+## Request Format
+
+The API accepts requests with the following content types:
+
+- `application/json` - For most endpoints
+- `multipart/form-data` - For file upload endpoints
+
+## Response Format
+
+All API responses are returned in JSON format with appropriate HTTP status codes.
+
+### Success Response
+
+Successful responses return the requested data directly:
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "name": "My Album",
+  "created_at": "2026-03-04T10:30:00.000Z"
+}
+```
+
+For list endpoints, an array is returned:
+
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "Album 1"
+  },
+  {
+    "id": "223e4567-e89b-12d3-a456-426614174001",
+    "name": "Album 2"
+  }
+]
+```
+
+### Error Response
+
+Error responses include an error message:
+
+```json
+{
+  "error": "Error description"
+}
+```
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes:
+
+| Status Code | Description |
+|------------|-------------|
+| `200` | Success - Request completed successfully |
+| `400` | Bad Request - Missing or invalid parameters |
+| `401` | Unauthorized - Authentication required or invalid |
+| `404` | Not Found - Resource does not exist |
+| `500` | Internal Server Error - Server error occurred |
+
+## Error Handling
+
+All endpoints follow a consistent error handling pattern:
+
+### 401 Unauthorized
+
+Returned when the user is not authenticated:
+
+```json
+{
+  "error": "No autorizado"
+}
+```
+
+### 400 Bad Request
+
+Returned when required parameters are missing or invalid:
+
+```json
+{
+  "error": "No se proporciono ID"
+}
+```
+
+### 404 Not Found
+
+Returned when a requested resource doesn't exist:
+
+```json
+{
+  "error": "Foto no encontrada"
+}
+```
+
+### 500 Internal Server Error
+
+Returned when a server-side error occurs:
+
+```json
+{
+  "error": "Error al obtener fotos"
+}
+```
+
+## Rate Limiting
+
+Currently, there are no rate limits enforced on the API. This may change in future versions.
+
+## API Versioning
+
+The API is currently unversioned. All endpoints are accessed directly under `/api`. Future versions may introduce versioning if breaking changes are necessary.
+
+## Available Resources
+
+The Galey Cloud API provides access to the following resources:
+
+- [Photos](/api/photos) - Manage photo uploads, listings, and metadata
+- [Albums](/api/albums) - Organize photos into albums
+
+## Getting Started
+
+1. **Authenticate** - Log in to obtain a session cookie
+2. **Create an Album** - Use `POST /api/albums` to create your first album
+3. **Upload Photos** - Use `POST /api/photos/upload` to upload photos
+4. **Organize** - Move photos between albums using `PATCH /api/photos/move`
+
+<Info>
+All API requests must include the session cookie obtained during authentication. The cookie is automatically included when making requests from the same domain.
+</Info>

@@ -1,0 +1,186 @@
+---
+title: Deployment Overview
+description: Understanding Galey Cloud's deployment architecture and requirements
+---
+
+## Architecture Overview
+
+Galey Cloud is a full-stack photo gallery application built with Next.js that requires three core services to operate:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      User's Browser                         │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Vercel (Next.js App)                       │
+│  • Server-side rendering                                    │
+│  • API routes (/api/photos/*)                              │
+│  • Authentication middleware                                │
+│  • Static asset serving                                     │
+└───────────┬──────────────────────┬──────────────────────────┘
+            │                      │
+            ▼                      ▼
+┌───────────────────┐    ┌──────────────────────┐
+│ Supabase          │    │  Vercel Blob         │
+│ • PostgreSQL DB   │    │  • Photo storage     │
+│ • Authentication  │    │  • Public URLs       │
+│ • Row-level       │    │  • CDN delivery      │
+│   security        │    └──────────────────────┘
+└───────────────────┘
+```
+
+## Required Services
+
+### Vercel
+Hosts the Next.js application with:
+- Automatic deployments from Git
+- Server-side rendering and API routes
+- Edge network for global performance
+- Analytics integration
+
+### Supabase
+Provides backend services:
+- PostgreSQL database for albums and photo metadata
+- Built-in authentication (email/password, OAuth)
+- Row-level security policies
+- Real-time capabilities
+
+### Vercel Blob
+Handles file storage:
+- Scalable object storage for photos
+- Automatic CDN distribution
+- Public URL generation
+- Integrated with Vercel platform
+
+## Prerequisites
+
+Before deploying Galey Cloud, ensure you have:
+
+<Steps>
+  <Step title="GitHub Account">
+    Source code should be in a GitHub repository for Vercel integration
+  </Step>
+  
+  <Step title="Vercel Account">
+    Sign up at [vercel.com](https://vercel.com) (free tier available)
+  </Step>
+  
+  <Step title="Supabase Account">
+    Sign up at [supabase.com](https://supabase.com) (free tier available)
+  </Step>
+  
+  <Step title="Node.js 18+">
+    For local development and testing before deployment
+  </Step>
+</Steps>
+
+## Deployment Steps Overview
+
+The complete deployment process involves:
+
+<Steps>
+  <Step title="Set up Supabase">
+    Create project, run database migrations, configure authentication
+    
+    [See Supabase Setup →](/deployment/supabase)
+  </Step>
+  
+  <Step title="Configure environment variables">
+    Gather all required API keys and connection strings
+    
+    [See Environment Variables →](/deployment/environment)
+  </Step>
+  
+  <Step title="Deploy to Vercel">
+    Connect repository, configure build settings, enable Vercel Blob
+    
+    [See Vercel Deployment →](/deployment/vercel)
+  </Step>
+  
+  <Step title="Test the deployment">
+    Verify authentication, photo upload, and storage functionality
+  </Step>
+</Steps>
+
+## Production Considerations
+
+### Performance
+
+- **Image Optimization**: Next.js config uses `unoptimized: true`. For production, consider enabling optimization or using a custom image CDN
+- **Database Indexing**: Add indexes on frequently queried columns (`user_id`, `album_id`)
+- **Connection Pooling**: Supabase provides built-in connection pooling for scalability
+
+### Scalability
+
+- **Vercel Blob Limits**: Free tier has storage and bandwidth limits. Monitor usage in Vercel dashboard
+- **Supabase Database**: Free tier includes 500MB database. Plan for upgrades as user base grows
+- **Rate Limiting**: Implement rate limiting on upload endpoints to prevent abuse
+
+### Monitoring
+
+- **Vercel Analytics**: Already integrated via `@vercel/analytics/next` (app/layout.tsx:3)
+- **Error Tracking**: Consider adding Sentry or similar for production error monitoring
+- **Database Metrics**: Use Supabase dashboard to monitor query performance
+
+### Backup & Recovery
+
+- **Database Backups**: Supabase Pro tier includes daily backups. Free tier requires manual exports
+- **Blob Storage**: Vercel Blob doesn't provide built-in backups. Consider periodic exports of critical images
+- **Migration Scripts**: Keep SQL scripts in version control (scripts/001_create_albums.sql, scripts/002_create_photos.sql)
+
+## Security Best Practices
+
+### Environment Variables
+
+<Warning>
+  Never commit `.env.local` or any file containing secrets to version control. All environment variables should be configured in Vercel's dashboard.
+</Warning>
+
+- Store all secrets in Vercel environment variables
+- Use `NEXT_PUBLIC_` prefix only for variables that are safe to expose to the browser
+- Rotate API keys periodically
+
+### Authentication
+
+- Enable email confirmation in Supabase Auth settings for production
+- Configure password strength requirements
+- Set up OAuth providers (Google, GitHub) for better UX
+- Enable 2FA for Supabase and Vercel accounts
+
+### Database Security
+
+- Row-level security (RLS) is enabled on all tables
+- All policies enforce `auth.uid() = user_id` to prevent data leaks
+- Never expose `service_role` key to the client
+- Regularly review and audit RLS policies
+
+### File Upload Security
+
+- Validate file types and sizes before upload
+- Consider adding virus scanning for user-uploaded content
+- Implement rate limiting on upload endpoints
+- Set appropriate CORS policies
+
+### API Routes
+
+- All API routes verify user authentication via Supabase
+- Authorization checks ensure users can only access their own data
+- Proper error handling prevents information disclosure
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Supabase Setup" icon="database" href="/deployment/supabase">
+    Configure your database and authentication
+  </Card>
+  
+  <Card title="Environment Variables" icon="key" href="/deployment/environment">
+    Set up all required configuration
+  </Card>
+  
+  <Card title="Vercel Deployment" icon="rocket" href="/deployment/vercel">
+    Deploy your application to production
+  </Card>
+</CardGroup>

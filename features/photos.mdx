@@ -1,0 +1,549 @@
+---
+title: Photo Management
+description: Upload, view, organize, and delete photos with drag-and-drop support and Vercel Blob storage
+---
+
+Photo management in Galey Cloud includes uploading images via drag-and-drop or file picker, viewing photo details with metadata and dominant color extraction, and organizing photos across albums.
+
+## Photo Upload
+
+### Drag-and-Drop Upload
+
+The `PhotoGrid` component supports drag-and-drop upload:
+
+```tsx
+const [isDragOver, setIsDragOver] = useState(false)
+
+const handleDragOver = useCallback((e: React.DragEvent) => {
+  e.preventDefault()
+  setIsDragOver(true)
+}, [])
+
+const handleDrop = useCallback(
+  (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    if (e.dataTransfer.files.length > 0) {
+      onUpload(e.dataTransfer.files)
+    }
+  },
+  [onUpload]
+)
+```
+
+Location: `components/gallery/photo-grid.tsx:56-74`
+
+<Note>
+  The grid area changes background color when files are dragged over it, providing visual feedback to users.
+</Note>
+
+### File Picker Upload
+
+Users can also click the "Subir" button to select files:
+
+```tsx
+<label>
+  <input
+    type="file"
+    className="sr-only"
+    multiple
+    accept="image/*"
+    onChange={(e) => e.target.files && onUpload(e.target.files)}
+    disabled={isUploading}
+  />
+  <Button
+    variant="default"
+    size="sm"
+    className="ml-2 gap-1.5 h-8"
+    disabled={isUploading}
+    asChild
+  >
+    <span>
+      <Upload className="h-3.5 w-3.5" />
+      {isUploading ? 'Subiendo...' : 'Subir'}
+    </span>
+  </Button>
+</label>
+```
+
+Location: `components/gallery/photo-grid.tsx:130-152`
+
+### Upload Handler
+
+The upload handler processes multiple files in parallel:
+
+```tsx
+const handleUpload = useCallback(
+  async (files: FileList) => {
+    setIsUploading(true)
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const formData = new FormData()
+        formData.append('file', file)
+        if (selectedAlbumId) formData.append('album_id', selectedAlbumId)
+
+        const res = await fetch('/api/photos/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Error al subir')
+        }
+        return res.json()
+      })
+
+      await Promise.all(uploadPromises)
+      mutate('/api/photos')
+      toast.success(`${files.length} foto${files.length > 1 ? 's subidas' : ' subida'} correctamente`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al subir fotos')
+    } finally {
+      setIsUploading(false)
+    }
+  },
+  [selectedAlbumId]
+)
+```
+
+Location: `app/gallery/page.tsx:49-79`
+
+### Upload API Endpoint
+
+The backend uses Vercel Blob for file storage:
+
+```typescript
+import { put } from '@vercel/blob'
+
+export async function POST(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  const formData = await request.formData()
+  const file = formData.get('file') as File
+  const albumId = formData.get('album_id') as string | null
+
+  if (!file) {
+    return NextResponse.json({ error: 'No se proporciono archivo' }, { status: 400 })
+  }
+
+  // Upload to Vercel Blob
+  const blob = await put(`photos/${user.id}/${Date.now()}-${file.name}`, file, {
+    access: 'public',
+  })
+
+  // Save metadata to Supabase
+  const { data, error } = await supabase.from('photos').insert({
+    user_id: user.id,
+    album_id: albumId || null,
+    blob_url: blob.url,
+    file_name: file.name,
+    file_size: file.size,
+    file_type: file.type,
+    width: null,
+    height: null,
+  }).select().single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data)
+}
+```
+
+Location: `app/api/photos/upload/route.ts:5-45`
+
+<Info>
+  Photos are stored with the path pattern `photos/{user_id}/{timestamp}-{filename}` to ensure uniqueness and organization.
+</Info>
+
+## Photo Grid Display
+
+### View Modes
+
+The photo grid supports three view modes:
+
+<CardGroup cols={3}>
+  <Card title="Small" icon="grid-2">
+    4-10 columns depending on screen size
+  </Card>
+  <Card title="Medium" icon="grid">
+    3-6 columns (default)
+  </Card>
+  <Card title="Large" icon="table-cells">
+    2-4 columns for larger thumbnails
+  </Card>
+</CardGroup>
+
+```tsx
+const [viewMode, setViewMode] = useState<ViewMode>('medium')
+
+const gridClass =
+  viewMode === 'small'
+    ? 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10'
+    : viewMode === 'medium'
+    ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6'
+    : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4'
+```
+
+Location: `components/gallery/photo-grid.tsx:76-82`
+
+### Photo Thumbnail
+
+Each photo is rendered with hover actions:
+
+```tsx
+<div key={photo.id} className="group relative">
+  <button
+    onClick={() => onSelectPhoto(photo)}
+    className={cn(
+      'relative aspect-square w-full overflow-hidden rounded-lg border-2 transition-all',
+      selectedPhotoId === photo.id
+        ? 'border-primary ring-2 ring-primary/30'
+        : 'border-transparent hover:border-border'
+    )}
+  >
+    <img
+      src={photo.blob_url}
+      alt={photo.file_name}
+      className="h-full w-full object-cover"
+      loading="lazy"
+    />
+  </button>
+  <div className="absolute right-1 top-1 flex gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+    {/* Move and Delete buttons */}
+  </div>
+</div>
+```
+
+Location: `components/gallery/photo-grid.tsx:170-222`
+
+## Photo Details Panel
+
+The `PhotoDetails` component displays comprehensive metadata:
+
+### Metadata Display
+
+```tsx
+<DetailRow label="Nombre" value={photo.file_name} />
+<DetailRow label="Fecha" value={formatDate(photo.created_at)} />
+<DetailRow label="Dimensiones" value={`${displayWidth} x ${displayHeight}`} />
+<DetailRow label="Tamano" value={formatFileSize(photo.file_size)} />
+<DetailRow label="Tipo" value={photo.file_type} />
+<DetailRow label="Album" value={albumName || 'Sin album'} />
+```
+
+Location: `components/gallery/photo-details.tsx:130-147`
+
+### Dominant Color Extraction
+
+The component extracts dominant colors using HTML5 Canvas:
+
+```tsx
+const img = new window.Image()
+img.crossOrigin = 'anonymous'
+img.onload = () => {
+  const w = img.naturalWidth
+  const h = img.naturalHeight
+  setLocalDims({ width: w, height: h })
+
+  // Extract dominant colors from canvas
+  const canvas = document.createElement('canvas')
+  const size = 50
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  if (ctx) {
+    ctx.drawImage(img, 0, 0, size, size)
+    const imageData = ctx.getImageData(0, 0, size, size).data
+    const colorMap: Record<string, number> = {}
+
+    for (let i = 0; i < imageData.length; i += 16) {
+      const r = Math.round(imageData[i] / 32) * 32
+      const g = Math.round(imageData[i + 1] / 32) * 32
+      const b = Math.round(imageData[i + 2] / 32) * 32
+      const key = `rgb(${r},${g},${b})`
+      colorMap[key] = (colorMap[key] || 0) + 1
+    }
+
+    const sorted = Object.entries(colorMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([color]) => color)
+
+    setDominantColors(sorted)
+  }
+}
+img.src = photo.blob_url
+```
+
+Location: `components/gallery/photo-details.tsx:42-84`
+
+### Automatic Dimension Updates
+
+If dimensions aren't stored, they're extracted and saved automatically:
+
+```tsx
+if (!photo.width || !photo.height) {
+  onDimensionsLoaded(photo.id, w, h)
+}
+```
+
+Location: `components/gallery/photo-details.tsx:49-51`
+
+## Moving Photos Between Albums
+
+Photos can be moved using the dropdown menu on each thumbnail:
+
+```tsx
+<DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <button className="rounded bg-background/80 p-1 text-foreground backdrop-blur-sm hover:bg-background">
+      <FolderInput className="h-3.5 w-3.5" />
+    </button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent align="end">
+    <DropdownMenuItem onClick={() => onMovePhoto(photo.id, null)}>
+      Sin album
+    </DropdownMenuItem>
+    {albums.map((album) => (
+      <DropdownMenuItem
+        key={album.id}
+        onClick={() => onMovePhoto(photo.id, album.id)}
+      >
+        {album.name}
+      </DropdownMenuItem>
+    ))}
+  </DropdownMenuContent>
+</DropdownMenu>
+```
+
+Location: `components/gallery/photo-grid.tsx:191-213`
+
+### Move API Endpoint
+
+```typescript
+// PATCH /api/photos/move
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  const { id, album_id } = await request.json()
+  if (!id) {
+    return NextResponse.json({ error: 'No se proporciono ID' }, { status: 400 })
+  }
+
+  const { data, error } = await supabase
+    .from('photos')
+    .update({ album_id: album_id || null })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data)
+}
+```
+
+Location: `app/api/photos/move/route.ts:4-34`
+
+## Deleting Photos
+
+### Confirmation Dialog
+
+A confirmation dialog prevents accidental deletion:
+
+```tsx
+<AlertDialog open={!!deletePhotoId} onOpenChange={() => setDeletePhotoId(null)}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Eliminar foto</AlertDialogTitle>
+      <AlertDialogDescription>
+        Esta accion no se puede deshacer. La foto se eliminara permanentemente.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+      <AlertDialogAction
+        onClick={() => {
+          if (deletePhotoId) onDeletePhoto(deletePhotoId)
+          setDeletePhotoId(null)
+        }}
+      >
+        Eliminar
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
+Location: `components/gallery/photo-grid.tsx:228-248`
+
+### Delete API Endpoint
+
+The delete endpoint removes the photo from both Vercel Blob and Supabase:
+
+```typescript
+import { del } from '@vercel/blob'
+
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  const { id } = await request.json()
+  if (!id) {
+    return NextResponse.json({ error: 'No se proporciono ID' }, { status: 400 })
+  }
+
+  // Fetch photo to get blob URL
+  const { data: photo, error: fetchError } = await supabase
+    .from('photos')
+    .select('blob_url')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (fetchError || !photo) {
+    return NextResponse.json({ error: 'Foto no encontrada' }, { status: 404 })
+  }
+
+  // Delete from Vercel Blob
+  await del(photo.blob_url)
+
+  // Delete from Supabase
+  const { error } = await supabase
+    .from('photos')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
+```
+
+Location: `app/api/photos/delete/route.ts:5-46`
+
+<Warning>
+  Photo deletion is permanent and cannot be undone. Both the file in Vercel Blob storage and the database record are removed.
+</Warning>
+
+## Photo Interface
+
+The Photo type defines the photo data structure:
+
+```typescript
+export interface Photo {
+  id: string
+  user_id: string
+  album_id: string | null
+  blob_url: string
+  file_name: string
+  file_size: number
+  file_type: string
+  width: number | null
+  height: number | null
+  created_at: string
+}
+```
+
+Location: `lib/types.ts:8-19`
+
+## API Endpoints Summary
+
+<ParamField path="GET /api/photos" type="endpoint">
+  Retrieve all photos for the authenticated user, ordered by creation date (newest first)
+  
+  **Authentication:** Required
+  
+  **Response:** Array of Photo objects
+</ParamField>
+
+<ParamField path="POST /api/photos/upload" type="endpoint">
+  Upload a new photo to Vercel Blob and save metadata
+  
+  **Authentication:** Required
+  
+  **Body:** FormData with `file` and optional `album_id`
+  
+  **Response:** Created Photo object
+</ParamField>
+
+<ParamField path="PATCH /api/photos/move" type="endpoint">
+  Move a photo to a different album
+  
+  **Authentication:** Required
+  
+  **Body:**
+  ```json
+  {
+    "id": "photo-uuid",
+    "album_id": "album-uuid" // or null for no album
+  }
+  ```
+  
+  **Response:** Updated Photo object
+</ParamField>
+
+<ParamField path="PATCH /api/photos/dimensions" type="endpoint">
+  Update photo dimensions (called automatically by PhotoDetails component)
+  
+  **Authentication:** Required
+  
+  **Body:**
+  ```json
+  {
+    "id": "photo-uuid",
+    "width": 1920,
+    "height": 1080
+  }
+  ```
+</ParamField>
+
+<ParamField path="DELETE /api/photos/delete" type="endpoint">
+  Delete a photo from Vercel Blob and database
+  
+  **Authentication:** Required
+  
+  **Body:**
+  ```json
+  {
+    "id": "photo-uuid"
+  }
+  ```
+  
+  **Response:**
+  ```json
+  {
+    "success": true
+  }
+  ```
+</ParamField>
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Albums" icon="folder" href="/features/albums">
+    Organize photos into albums
+  </Card>
+  <Card title="Gallery" icon="grid" href="/features/gallery">
+    Main gallery interface overview
+  </Card>
+</CardGroup>

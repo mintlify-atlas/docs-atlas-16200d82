@@ -1,0 +1,180 @@
+---
+title: Gallery Interface
+description: The main photo gallery interface with photo grid, selection, and real-time updates
+---
+
+The gallery interface is the central hub of Galey Cloud where users can view, organize, and manage their photos. Built with React and Next.js, it provides a responsive, real-time photo management experience.
+
+## Overview
+
+The gallery page is implemented in `app/gallery/page.tsx` and orchestrates three main components:
+
+- **AlbumSidebar** - Navigate between albums and search photos
+- **PhotoGrid** - Display photos in a responsive grid layout
+- **PhotoDetails** - View detailed information about selected photos
+
+## Core Component Structure
+
+```tsx
+export default function GalleryPage() {
+  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  
+  return (
+    <div className="flex h-svh overflow-hidden bg-background">
+      <AlbumSidebar
+        albums={albums}
+        selectedAlbumId={selectedAlbumId}
+        onSelectAlbum={setSelectedAlbumId}
+        onCreateAlbum={handleCreateAlbum}
+        onDeleteAlbum={handleDeleteAlbum}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onLogout={handleLogout}
+      />
+      
+      <PhotoGrid
+        photos={filteredPhotos}
+        selectedPhotoId={selectedPhoto?.id ?? null}
+        onSelectPhoto={setSelectedPhoto}
+        onUpload={handleUpload}
+        onDeletePhoto={handleDeletePhoto}
+        onMovePhoto={handleMovePhoto}
+        albums={albums}
+        isUploading={isUploading}
+        isLoading={photosLoading || albumsLoading}
+      />
+      
+      <PhotoDetails
+        photo={selectedPhoto}
+        albumName={selectedAlbumName}
+        onClose={() => setSelectedPhoto(null)}
+        onDimensionsLoaded={handleDimensionsLoaded}
+      />
+    </div>
+  )
+}
+```
+
+Location: `app/gallery/page.tsx:16-203`
+
+## Real-Time Data with SWR
+
+The gallery uses SWR for efficient data fetching and automatic revalidation:
+
+```tsx
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+const { data: albums = [], isLoading: albumsLoading } = useSWR<Album[]>(
+  '/api/albums',
+  fetcher
+)
+
+const { data: allPhotos = [], isLoading: photosLoading } = useSWR<Photo[]>(
+  '/api/photos',
+  fetcher
+)
+```
+
+Location: `app/gallery/page.tsx:14-30`
+
+<Note>
+  SWR automatically revalidates data when the user refocuses the tab or reconnects to the network, ensuring the gallery always displays fresh data.
+</Note>
+
+## Photo Filtering
+
+Photos are filtered in real-time based on album selection and search query:
+
+```tsx
+const filteredPhotos = useMemo(() => {
+  let photos = allPhotos
+  if (selectedAlbumId) {
+    photos = photos.filter((p) => p.album_id === selectedAlbumId)
+  }
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase()
+    photos = photos.filter((p) => p.file_name.toLowerCase().includes(q))
+  }
+  return photos
+}, [allPhotos, selectedAlbumId, searchQuery])
+```
+
+Location: `app/gallery/page.tsx:32-42`
+
+## Photo Selection
+
+Users can select photos from the grid to view detailed information:
+
+<Steps>
+  <Step title="Click a photo in the grid">
+    The `PhotoGrid` component triggers the `onSelectPhoto` callback
+  </Step>
+  <Step title="Photo details panel opens">
+    The `PhotoDetails` component displays on the right side with metadata, dimensions, and dominant colors
+  </Step>
+  <Step title="View or close details">
+    Users can close the panel by clicking the X button or select another photo
+  </Step>
+</Steps>
+
+## Layout Structure
+
+The gallery uses a three-column flexbox layout:
+
+<CardGroup cols={3}>
+  <Card title="Album Sidebar" icon="folder">
+    Fixed width (256px) on the left for album navigation and search
+  </Card>
+  <Card title="Photo Grid" icon="grid">
+    Flexible main area that displays photos in a responsive grid
+  </Card>
+  <Card title="Photo Details" icon="info">
+    Fixed width (320px) panel on the right for selected photo details
+  </Card>
+</CardGroup>
+
+## State Management
+
+The gallery manages several pieces of state:
+
+| State | Type | Purpose |
+|-------|------|----------|
+| `selectedAlbumId` | `string \| null` | Currently selected album filter |
+| `selectedPhoto` | `Photo \| null` | Currently selected photo for details view |
+| `searchQuery` | `string` | Search filter for photo filenames |
+| `isUploading` | `boolean` | Upload operation in progress |
+
+## Cache Mutations
+
+When photos or albums are modified, the gallery uses SWR's `mutate` function to update the cache:
+
+```tsx
+import { mutate } from 'swr'
+
+// After uploading photos
+await Promise.all(uploadPromises)
+mutate('/api/photos')
+
+// After deleting an album
+mutate('/api/albums')
+mutate('/api/photos')  // Photos may have been moved
+```
+
+Locations: `app/gallery/page.tsx:70`, `app/gallery/page.tsx:136-137`
+
+## Protected Route
+
+The gallery page is protected by authentication middleware that redirects unauthenticated users to the login page. See the [Authentication](/features/authentication) documentation for details.
+
+## Related Components
+
+<CardGroup cols={2}>
+  <Card title="Albums" icon="folder" href="/features/albums">
+    Learn about album management in the sidebar
+  </Card>
+  <Card title="Photos" icon="image" href="/features/photos">
+    Explore photo upload, viewing, and management features
+  </Card>
+</CardGroup>

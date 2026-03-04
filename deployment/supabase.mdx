@@ -1,0 +1,314 @@
+---
+title: Supabase Setup
+description: Configure your Supabase project for Galey Cloud
+---
+
+Supabase provides the authentication and database backend for Galey Cloud. This guide walks through creating a project, setting up the database schema, and configuring security policies.
+
+## Creating a Supabase Project
+
+<Steps>
+  <Step title="Sign up or log in">
+    Go to [supabase.com](https://supabase.com) and create an account or log in
+  </Step>
+  
+  <Step title="Create new project">
+    - Click "New Project"
+    - Choose your organization or create a new one
+    - Enter a project name (e.g., "galey-cloud-prod")
+    - Generate a strong database password (save this securely)
+    - Select a region close to your users
+    - Click "Create new project"
+    
+    <Note>
+      Project creation takes 1-2 minutes. The database password cannot be recovered, so save it securely.
+    </Note>
+  </Step>
+  
+  <Step title="Wait for provisioning">
+    Your project will be provisioned with a PostgreSQL database, authentication service, and API endpoints.
+  </Step>
+</Steps>
+
+## Setting Up Authentication
+
+<Steps>
+  <Step title="Configure email authentication">
+    1. Navigate to **Authentication** → **Providers** in the Supabase dashboard
+    2. Email provider should be enabled by default
+    3. For production, enable **"Confirm email"** to verify user emails
+    4. Set **"Site URL"** to your production domain (e.g., `https://galey.example.com`)
+  </Step>
+  
+  <Step title="Configure redirect URLs">
+    1. Go to **Authentication** → **URL Configuration**
+    2. Add your Vercel deployment URL to **Redirect URLs**:
+       ```
+       https://your-app.vercel.app/auth/callback
+       https://your-custom-domain.com/auth/callback
+       ```
+    3. For local development, also add:
+       ```
+       http://localhost:3000/auth/callback
+       ```
+  </Step>
+  
+  <Step title="Optional: Configure OAuth providers">
+    For Google, GitHub, or other OAuth providers:
+    1. Go to **Authentication** → **Providers**
+    2. Enable desired providers
+    3. Add OAuth credentials from respective platforms
+    4. Configure redirect URLs in OAuth provider settings
+  </Step>
+</Steps>
+
+## Running Database Migrations
+
+Galey Cloud uses two main tables: `albums` and `photos`. The SQL migration scripts are located in `scripts/` directory.
+
+### Migration 1: Create Albums Table
+
+<Steps>
+  <Step title="Open SQL Editor">
+    Navigate to **SQL Editor** in the Supabase dashboard
+  </Step>
+  
+  <Step title="Create albums table">
+    Copy and paste the following SQL script:
+    
+    ```sql scripts/001_create_albums.sql
+    CREATE TABLE IF NOT EXISTS public.albums (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+    
+    ALTER TABLE public.albums ENABLE ROW LEVEL SECURITY;
+    
+    CREATE POLICY "albums_select_own" ON public.albums
+      FOR SELECT USING (auth.uid() = user_id);
+    
+    CREATE POLICY "albums_insert_own" ON public.albums
+      FOR INSERT WITH CHECK (auth.uid() = user_id);
+    
+    CREATE POLICY "albums_update_own" ON public.albums
+      FOR UPDATE USING (auth.uid() = user_id);
+    
+    CREATE POLICY "albums_delete_own" ON public.albums
+      FOR DELETE USING (auth.uid() = user_id);
+    ```
+  </Step>
+  
+  <Step title="Execute the script">
+    Click **Run** or press `Ctrl/Cmd + Enter` to execute the SQL
+    
+    <Check>
+      You should see "Success. No rows returned" indicating the table and policies were created.
+    </Check>
+  </Step>
+</Steps>
+
+### Migration 2: Create Photos Table
+
+<Steps>
+  <Step title="Open new query">
+    In the SQL Editor, start a new query
+  </Step>
+  
+  <Step title="Create photos table">
+    Copy and paste the following SQL script:
+    
+    ```sql scripts/002_create_photos.sql
+    CREATE TABLE IF NOT EXISTS public.photos (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+      album_id UUID REFERENCES public.albums(id) ON DELETE SET NULL,
+      blob_url TEXT NOT NULL,
+      file_name TEXT NOT NULL,
+      file_size BIGINT,
+      file_type TEXT,
+      width INT,
+      height INT,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+    
+    ALTER TABLE public.photos ENABLE ROW LEVEL SECURITY;
+    
+    CREATE POLICY "photos_select_own" ON public.photos
+      FOR SELECT USING (auth.uid() = user_id);
+    
+    CREATE POLICY "photos_insert_own" ON public.photos
+      FOR INSERT WITH CHECK (auth.uid() = user_id);
+    
+    CREATE POLICY "photos_update_own" ON public.photos
+      FOR UPDATE USING (auth.uid() = user_id);
+    
+    CREATE POLICY "photos_delete_own" ON public.photos
+      FOR DELETE USING (auth.uid() = user_id);
+    ```
+  </Step>
+  
+  <Step title="Execute the script">
+    Click **Run** to create the photos table and security policies
+  </Step>
+</Steps>
+
+### Verify Tables Created
+
+<Steps>
+  <Step title="Check Table Editor">
+    1. Navigate to **Table Editor** in the Supabase dashboard
+    2. You should see two tables: `albums` and `photos`
+    3. Click on each table to verify the schema matches the migrations
+  </Step>
+</Steps>
+
+## Understanding Row-Level Security Policies
+
+All tables have Row-Level Security (RLS) enabled to ensure users can only access their own data.
+
+### Albums Table Policies
+
+| Policy Name | Operation | Rule |
+|------------|-----------|------|
+| `albums_select_own` | SELECT | User can only read their own albums |
+| `albums_insert_own` | INSERT | User can only create albums for themselves |
+| `albums_update_own` | UPDATE | User can only update their own albums |
+| `albums_delete_own` | DELETE | User can only delete their own albums |
+
+### Photos Table Policies
+
+| Policy Name | Operation | Rule |
+|------------|-----------|------|
+| `photos_select_own` | SELECT | User can only read their own photos |
+| `photos_insert_own` | INSERT | User can only upload photos for themselves |
+| `photos_update_own` | UPDATE | User can only update their own photos |
+| `photos_delete_own` | DELETE | User can only delete their own photos |
+
+<Info>
+  All policies use `auth.uid() = user_id` to ensure authenticated users can only access their own data. This prevents data leaks even if there's a bug in the application code.
+</Info>
+
+## Getting API Keys
+
+You'll need two API keys for your application:
+
+<Steps>
+  <Step title="Navigate to API settings">
+    Go to **Settings** → **API** in the Supabase dashboard
+  </Step>
+  
+  <Step title="Copy Project URL">
+    Copy the **Project URL** (e.g., `https://xxxxx.supabase.co`)
+    
+    This will be used as `NEXT_PUBLIC_SUPABASE_URL`
+  </Step>
+  
+  <Step title="Copy anon/public key">
+    Under **Project API keys**, copy the `anon` `public` key
+    
+    This will be used as `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+    
+    <Warning>
+      Do NOT use the `service_role` `secret` key in your Next.js application. This key bypasses RLS and should only be used in secure server environments.
+    </Warning>
+  </Step>
+  
+  <Step title="Save keys securely">
+    Store these values temporarily - you'll add them to Vercel environment variables in the next steps
+  </Step>
+</Steps>
+
+## Testing the Connection
+
+Before deploying, verify your Supabase setup works correctly:
+
+<Steps>
+  <Step title="Set up local environment">
+    Create `.env.local` in your project root:
+    
+    ```bash
+    NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+    ```
+  </Step>
+  
+  <Step title="Install dependencies">
+    ```bash
+    npm install
+    # or
+    pnpm install
+    ```
+  </Step>
+  
+  <Step title="Run development server">
+    ```bash
+    npm run dev
+    ```
+  </Step>
+  
+  <Step title="Test authentication">
+    1. Navigate to `http://localhost:3000/auth/sign-up`
+    2. Create a test account
+    3. Check Supabase dashboard → **Authentication** → **Users** to verify user was created
+    4. Try logging in at `http://localhost:3000/auth/login`
+  </Step>
+  
+  <Step title="Verify database access">
+    1. Log into your test account
+    2. Try creating an album
+    3. Check Supabase dashboard → **Table Editor** → **albums** to verify the record
+    4. Verify you can only see your own data (RLS is working)
+  </Step>
+</Steps>
+
+## Optional: Database Indexes
+
+For better performance with large datasets, add indexes:
+
+```sql
+-- Index for faster user album lookups
+CREATE INDEX idx_albums_user_id ON public.albums(user_id);
+
+-- Index for faster user photo lookups
+CREATE INDEX idx_photos_user_id ON public.photos(user_id);
+
+-- Index for faster album photo lookups
+CREATE INDEX idx_photos_album_id ON public.photos(album_id);
+
+-- Index for sorting by creation date
+CREATE INDEX idx_photos_created_at ON public.photos(created_at DESC);
+```
+
+## Troubleshooting
+
+### "JWTExpired" errors
+
+- Check that your Site URL and Redirect URLs are configured correctly
+- Ensure cookies are enabled in your browser
+- Verify the JWT expiry settings in **Authentication** → **Settings**
+
+### "Row-level security policy violation"
+
+- Verify the user is authenticated before making database requests
+- Check that `user_id` is set correctly when inserting records
+- Review RLS policies in **Authentication** → **Policies**
+
+### "Failed to fetch" errors
+
+- Verify your `NEXT_PUBLIC_SUPABASE_URL` is correct
+- Check browser console for CORS errors
+- Ensure Supabase project is active (not paused)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environment Variables" icon="key" href="/deployment/environment">
+    Set up all required environment variables
+  </Card>
+  
+  <Card title="Vercel Deployment" icon="rocket" href="/deployment/vercel">
+    Deploy your application to Vercel
+  </Card>
+</CardGroup>

@@ -1,0 +1,298 @@
+---
+title: Album Management
+description: Create, organize, and manage photo albums with the album sidebar interface
+---
+
+Albums allow users to organize their photos into collections. The album management system is implemented through the `AlbumSidebar` component and backend API routes.
+
+## Album Sidebar Component
+
+The album sidebar is located on the left side of the gallery and provides album navigation, creation, and deletion capabilities.
+
+```tsx
+<AlbumSidebar
+  albums={albums}
+  selectedAlbumId={selectedAlbumId}
+  onSelectAlbum={setSelectedAlbumId}
+  onCreateAlbum={handleCreateAlbum}
+  onDeleteAlbum={handleDeleteAlbum}
+  searchQuery={searchQuery}
+  onSearchChange={setSearchQuery}
+  onLogout={handleLogout}
+/>
+```
+
+Location: `components/gallery/album-sidebar.tsx:32-185`
+
+## Album List Display
+
+Albums are displayed in a scrollable list with visual indication of the selected album:
+
+```tsx
+<button
+  onClick={() => onSelectAlbum(album.id)}
+  className={cn(
+    'flex flex-1 items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors',
+    selectedAlbumId === album.id
+      ? 'bg-primary/10 text-primary font-medium'
+      : 'text-foreground hover:bg-muted'
+  )}
+>
+  <ImageIcon className="h-4 w-4 shrink-0" />
+  <span className="truncate">{album.name}</span>
+</button>
+```
+
+Location: `components/gallery/album-sidebar.tsx:89-100`
+
+## Creating Albums
+
+### UI Flow
+
+<Steps>
+  <Step title="Click 'Nuevo album' button">
+    The sidebar switches to creation mode with an input field
+  </Step>
+  <Step title="Enter album name">
+    User types the album name and presses Enter or clicks 'Crear'
+  </Step>
+  <Step title="Album is created">
+    The API creates the album and the list updates automatically via SWR
+  </Step>
+</Steps>
+
+### Frontend Implementation
+
+```tsx
+const [newAlbumName, setNewAlbumName] = useState('')
+const [isCreating, setIsCreating] = useState(false)
+
+const handleCreate = () => {
+  if (newAlbumName.trim()) {
+    onCreateAlbum(newAlbumName.trim())
+    setNewAlbumName('')
+    setIsCreating(false)
+  }
+}
+```
+
+Location: `components/gallery/album-sidebar.tsx:42-52`
+
+### Backend API
+
+The album creation endpoint validates the user and album name:
+
+```typescript
+// POST /api/albums
+export async function POST(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  const { name } = await request.json()
+  if (!name || !name.trim()) {
+    return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })
+  }
+
+  const { data, error } = await supabase
+    .from('albums')
+    .insert({ user_id: user.id, name: name.trim() })
+    .select()
+    .single()
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data)
+}
+```
+
+Location: `app/api/albums/route.ts:29-57`
+
+<Note>
+  Album names are trimmed to prevent whitespace-only names. The backend validates that the name is not empty.
+</Note>
+
+## Deleting Albums
+
+### Confirmation Dialog
+
+Before deleting an album, users are shown a confirmation dialog:
+
+```tsx
+<AlertDialog open={!!deleteAlbumId} onOpenChange={() => setDeleteAlbumId(null)}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Eliminar album</AlertDialogTitle>
+      <AlertDialogDescription>
+        Las fotos del album no se eliminaran, solo se moveran a "Todas las fotos".
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+      <AlertDialogAction
+        onClick={() => {
+          if (deleteAlbumId) onDeleteAlbum(deleteAlbumId)
+          setDeleteAlbumId(null)
+        }}
+      >
+        Eliminar
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
+Location: `components/gallery/album-sidebar.tsx:162-182`
+
+### Backend API
+
+When an album is deleted, all photos in that album are moved to "no album" first:
+
+```typescript
+// DELETE /api/albums
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  const { id } = await request.json()
+  if (!id) {
+    return NextResponse.json({ error: 'No se proporciono ID' }, { status: 400 })
+  }
+
+  // Move photos in this album to "no album"
+  await supabase
+    .from('photos')
+    .update({ album_id: null })
+    .eq('album_id', id)
+    .eq('user_id', user.id)
+
+  const { error } = await supabase
+    .from('albums')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
+}
+```
+
+Location: `app/api/albums/route.ts:59-94`
+
+<Warning>
+  When an album is deleted, photos are preserved by moving them to the "no album" state (album_id = null). Photos are never deleted when an album is removed.
+</Warning>
+
+## Listing Albums
+
+Albums are fetched via the GET endpoint, ordered by creation date:
+
+```typescript
+// GET /api/albums
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
+  const { data, error } = await supabase
+    .from('albums')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json(data)
+}
+```
+
+Location: `app/api/albums/route.ts:4-27`
+
+## Album Interface
+
+The Album type defines the structure of album data:
+
+```typescript
+export interface Album {
+  id: string
+  user_id: string
+  name: string
+  created_at: string
+}
+```
+
+Location: `lib/types.ts:1-6`
+
+## API Endpoints
+
+<ParamField path="GET /api/albums" type="endpoint">
+  Retrieve all albums for the authenticated user, ordered by creation date
+  
+  **Authentication:** Required
+  
+  **Response:** Array of Album objects
+</ParamField>
+
+<ParamField path="POST /api/albums" type="endpoint">
+  Create a new album
+  
+  **Authentication:** Required
+  
+  **Body:**
+  ```json
+  {
+    "name": "Vacation Photos"
+  }
+  ```
+  
+  **Response:** Created Album object
+</ParamField>
+
+<ParamField path="DELETE /api/albums" type="endpoint">
+  Delete an album and move all photos to "no album"
+  
+  **Authentication:** Required
+  
+  **Body:**
+  ```json
+  {
+    "id": "album-uuid"
+  }
+  ```
+  
+  **Response:**
+  ```json
+  {
+    "success": true
+  }
+  ```
+</ParamField>
+
+## Row-Level Security
+
+All album operations use Supabase's row-level security (RLS) to ensure users can only access their own albums. The `user_id` field is checked on every database operation.
+
+## Related Features
+
+<CardGroup cols={2}>
+  <Card title="Photos" icon="image" href="/features/photos">
+    Learn how to organize photos within albums
+  </Card>
+  <Card title="Gallery" icon="grid" href="/features/gallery">
+    Explore the main gallery interface
+  </Card>
+</CardGroup>

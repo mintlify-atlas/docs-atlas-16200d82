@@ -1,0 +1,448 @@
+---
+title: Environment Variables
+description: Complete reference for Galey Cloud environment variables
+---
+
+This guide provides a comprehensive reference for all environment variables required to run Galey Cloud.
+
+## Overview
+
+Galey Cloud requires environment variables for:
+
+- **Supabase**: Database and authentication
+- **Vercel Blob**: Photo storage
+- **Development**: Local development redirects
+
+<Warning>
+  Never commit `.env.local` or any file containing secrets to version control. Add these files to `.gitignore`.
+</Warning>
+
+## Required Environment Variables
+
+### Supabase Configuration
+
+<ParamField path="NEXT_PUBLIC_SUPABASE_URL" type="string" required>
+  Your Supabase project URL
+  
+  **Format**: `https://xxxxxxxxxxxxx.supabase.co`
+  
+  **Where to find**:
+  1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
+  2. Select your project
+  3. Navigate to **Settings** → **API**
+  4. Copy **Project URL**
+  
+  **Used in**:
+  - `lib/supabase/client.ts:5`
+  - `lib/supabase/server.ts:13`
+  - `lib/supabase/middleware.ts:12`
+  
+  <Note>
+    The `NEXT_PUBLIC_` prefix makes this variable accessible in browser code. This is safe because it's a public URL.
+  </Note>
+</ParamField>
+
+<ParamField path="NEXT_PUBLIC_SUPABASE_ANON_KEY" type="string" required>
+  Your Supabase anonymous/public API key
+  
+  **Format**: Long JWT token starting with `eyJ...`
+  
+  **Where to find**:
+  1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
+  2. Select your project
+  3. Navigate to **Settings** → **API**
+  4. Copy **Project API keys** → `anon` `public`
+  
+  **Used in**:
+  - `lib/supabase/client.ts:6`
+  - `lib/supabase/server.ts:14`
+  - `lib/supabase/middleware.ts:13`
+  
+  <Warning>
+    Use the `anon` key, NOT the `service_role` key. The service role key bypasses Row-Level Security and should never be exposed to the client.
+  </Warning>
+</ParamField>
+
+### Vercel Blob Configuration
+
+<ParamField path="BLOB_READ_WRITE_TOKEN" type="string" required>
+  Vercel Blob storage access token
+  
+  **Where to find**:
+  This is automatically added when you connect Vercel Blob to your project:
+  1. Go to your Vercel project dashboard
+  2. Navigate to **Storage**
+  3. Create or connect a Blob store
+  4. Click **"Connect to Project"**
+  5. The token is automatically added to your environment variables
+  
+  **Used in**:
+  - `app/api/photos/upload/route.ts` (via `@vercel/blob`)
+  - `app/api/photos/delete/route.ts` (via `@vercel/blob`)
+  
+  <Info>
+    The `@vercel/blob` package automatically uses this environment variable. You don't need to manually pass it to the SDK.
+  </Info>
+</ParamField>
+
+### Development-Only Variables
+
+<ParamField path="NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL" type="string" optional>
+  Custom redirect URL for development environment
+  
+  **Default**: `http://localhost:3000/auth/callback`
+  
+  **Where to use**: Only needed if you're using a different local development URL
+  
+  **Used in**:
+  - `app/auth/sign-up/page.tsx:44`
+  
+  **Example**:
+  ```bash
+  NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3001/auth/callback
+  ```
+  
+  <Note>
+    This is only used during development. In production, Supabase uses the Site URL configured in your Supabase dashboard.
+  </Note>
+</ParamField>
+
+## Environment Files
+
+### Local Development (.env.local)
+
+Create a `.env.local` file in your project root for local development:
+
+```bash .env.local
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Vercel Blob (for local development with Vercel CLI)
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxxxxxxxxxx
+
+# Optional: Custom development redirect URL
+# NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL=http://localhost:3000/auth/callback
+```
+
+<Warning>
+  Add `.env.local` to your `.gitignore` to prevent committing secrets:
+  ```bash .gitignore
+  .env*.local
+  .env
+  ```
+</Warning>
+
+### Vercel Production Environment
+
+In Vercel, configure environment variables through the dashboard:
+
+<Steps>
+  <Step title="Navigate to environment variables">
+    1. Go to your Vercel project dashboard
+    2. Click **Settings** → **Environment Variables**
+  </Step>
+  
+  <Step title="Add each variable">
+    For each variable:
+    1. Enter **Key** (variable name)
+    2. Enter **Value** (secret value)
+    3. Select **Environments**:
+       - **Production**: Main branch deployments
+       - **Preview**: Branch and PR deployments
+       - **Development**: Local development with Vercel CLI
+  </Step>
+  
+  <Step title="Recommended configuration">
+    | Variable | Production | Preview | Development |
+    |----------|-----------|---------|-------------|
+    | `NEXT_PUBLIC_SUPABASE_URL` | ✓ | ✓ | ✓ |
+    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✓ | ✓ | ✓ |
+    | `BLOB_READ_WRITE_TOKEN` | ✓ | ✓ | ✓ |
+    | `NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL` | ✗ | ✗ | ✓ |
+  </Step>
+</Steps>
+
+## Development vs Production Configurations
+
+### Development Environment
+
+**Purpose**: Local development and testing
+
+**Configuration**:
+- Use `.env.local` file
+- Connect to development Supabase project (optional)
+- Use `http://localhost:3000` for redirect URLs
+
+**Best practices**:
+- Use separate Supabase project for development
+- Don't use production credentials locally
+- Test with realistic but non-sensitive data
+
+### Preview Environment
+
+**Purpose**: Testing branches and pull requests
+
+**Configuration**:
+- Use same environment variables as production
+- Automatic deployments for each PR
+- Unique URLs for each deployment (e.g., `your-app-git-feature.vercel.app`)
+
+**Best practices**:
+- Use production Supabase project or a staging project
+- Test authentication flows with preview URLs
+- Add preview URLs to Supabase redirect whitelist
+
+### Production Environment
+
+**Purpose**: Live application for end users
+
+**Configuration**:
+- All variables configured in Vercel dashboard
+- Custom domain configured
+- Production Supabase project
+
+**Best practices**:
+- Use strong, unique credentials
+- Enable email confirmation in Supabase
+- Monitor usage and set up alerts
+- Regular security audits
+
+## Security Considerations
+
+### Public vs Private Variables
+
+**Variables with `NEXT_PUBLIC_` prefix**:
+- Accessible in browser JavaScript
+- Bundled into client-side code
+- Should only contain non-sensitive values
+
+**Variables without `NEXT_PUBLIC_` prefix**:
+- Only accessible on the server
+- Never exposed to the browser
+- Can contain sensitive secrets
+
+<Info>
+  In Galey Cloud, all Supabase variables use `NEXT_PUBLIC_` because they're safe to expose:
+  - The URL is publicly accessible
+  - The anon key is designed to be public
+  - Row-Level Security protects data access
+</Info>
+
+### Supabase Service Role Key
+
+<Warning>
+  Galey Cloud does NOT use the Supabase service role key. This key bypasses all Row-Level Security policies and should NEVER be exposed to client code or stored in environment variables accessible to the browser.
+</Warning>
+
+Only use `service_role` key if:
+- Running admin operations in a secure backend
+- Using Supabase CLI for migrations
+- Building internal tools that need unrestricted access
+
+### Blob Storage Token
+
+`BLOB_READ_WRITE_TOKEN` is a server-side secret:
+- Never exposed to the browser
+- Only used in API routes (`/api/photos/upload`, `/api/photos/delete`)
+- Grants read/write access to Vercel Blob storage
+
+<Warning>
+  Do not log or expose `BLOB_READ_WRITE_TOKEN` in error messages or responses.
+</Warning>
+
+### Best Practices
+
+<Steps>
+  <Step title="Rotate secrets regularly">
+    - Rotate API keys every 3-6 months
+    - Immediately rotate if a key is exposed
+    - Update keys in both Supabase/Vercel and your environment variables
+  </Step>
+  
+  <Step title="Use different projects per environment">
+    - **Development**: `galey-dev.supabase.co`
+    - **Staging**: `galey-staging.supabase.co`
+    - **Production**: `galey-prod.supabase.co`
+  </Step>
+  
+  <Step title="Limit access to environment variables">
+    - Only grant Vercel project access to necessary team members
+    - Use Vercel teams to control access
+    - Audit who has access to production secrets
+  </Step>
+  
+  <Step title="Monitor for leaks">
+    - Use tools like [GitGuardian](https://www.gitguardian.com/) to scan commits
+    - Check public repositories for accidentally committed secrets
+    - Enable secret scanning on GitHub
+  </Step>
+</Steps>
+
+## Validation and Testing
+
+### Verify Environment Variables
+
+Create a simple test page to verify variables are loaded (for development only):
+
+```typescript app/test-env/page.tsx
+export default function TestEnv() {
+  return (
+    <div>
+      <h1>Environment Variables Test</h1>
+      <ul>
+        <li>
+          NEXT_PUBLIC_SUPABASE_URL: {process.env.NEXT_PUBLIC_SUPABASE_URL ? '✓ Set' : '✗ Missing'}
+        </li>
+        <li>
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✓ Set' : '✗ Missing'}
+        </li>
+      </ul>
+    </div>
+  )
+}
+```
+
+<Warning>
+  Remove this test page before deploying to production. Never display actual secret values in the UI.
+</Warning>
+
+### Test Supabase Connection
+
+Verify Supabase credentials work:
+
+```bash
+curl -X GET \
+  'https://xxxxxxxxxxxxx.supabase.co/rest/v1/' \
+  -H "apikey: YOUR_ANON_KEY" \
+  -H "Authorization: Bearer YOUR_ANON_KEY"
+```
+
+Expected response: `{"message":"Welcome to PostgREST"}`
+
+### Test Blob Storage
+
+In a Vercel deployment, check runtime logs when uploading a photo. You should see successful blob operations without authentication errors.
+
+## Troubleshooting
+
+### "Supabase URL is required" error
+
+**Cause**: `NEXT_PUBLIC_SUPABASE_URL` is not set
+
+**Solution**:
+1. Verify the variable is set in `.env.local` (development) or Vercel dashboard (production)
+2. Restart development server: `npm run dev`
+3. Redeploy on Vercel if in production
+
+### "Invalid API key" error
+
+**Cause**: `NEXT_PUBLIC_SUPABASE_ANON_KEY` is incorrect or malformed
+
+**Solution**:
+1. Copy the key again from Supabase dashboard → Settings → API
+2. Ensure no extra spaces or quotes
+3. Verify you're using the `anon` key, not `service_role`
+
+### Blob upload fails with 401 Unauthorized
+
+**Cause**: `BLOB_READ_WRITE_TOKEN` is missing or invalid
+
+**Solution**:
+1. Verify Vercel Blob is connected to your project
+2. Check **Settings** → **Environment Variables** for `BLOB_READ_WRITE_TOKEN`
+3. Reconnect Blob storage if necessary
+
+### Environment variables not updating
+
+**Cause**: Environment variables are cached or not reloaded
+
+**Solution**:
+- **Local development**: Restart dev server (`Ctrl+C`, then `npm run dev`)
+- **Vercel**: Trigger a new deployment (push to Git or use **Deployments** → **Redeploy**)
+
+### Variables work locally but not in Vercel
+
+**Cause**: Variables not configured in Vercel dashboard
+
+**Solution**:
+1. Go to Vercel project → **Settings** → **Environment Variables**
+2. Add missing variables
+3. Select correct environments (Production/Preview/Development)
+4. Redeploy
+
+## Reference Implementation
+
+Here's how environment variables are used throughout the codebase:
+
+### Supabase Client (Browser)
+
+```typescript lib/supabase/client.ts
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+}
+```
+
+### Supabase Client (Server)
+
+```typescript lib/supabase/server.ts
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options),
+            )
+          } catch {
+            // Server Component - handled by middleware
+          }
+        },
+      },
+    },
+  )
+}
+```
+
+### Vercel Blob Upload
+
+```typescript app/api/photos/upload/route.ts
+import { put } from '@vercel/blob'
+
+// BLOB_READ_WRITE_TOKEN is automatically used by @vercel/blob
+const blob = await put(`photos/${user.id}/${Date.now()}-${file.name}`, file, {
+  access: 'public',
+})
+```
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Supabase Setup" icon="database" href="/deployment/supabase">
+    Configure your Supabase project
+  </Card>
+  
+  <Card title="Vercel Deployment" icon="rocket" href="/deployment/vercel">
+    Deploy to Vercel
+  </Card>
+  
+  <Card title="Deployment Overview" icon="book" href="/deployment/overview">
+    Return to overview
+  </Card>
+</CardGroup>

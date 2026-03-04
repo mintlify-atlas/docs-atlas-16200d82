@@ -1,0 +1,191 @@
+---
+title: 'Authentication'
+description: 'How to authenticate with the Galey Cloud API'
+---
+
+## Overview
+
+The Galey Cloud API uses session-based authentication powered by Supabase Auth. Authentication is managed through HTTP-only cookies, which are automatically set when users log in through the web application.
+
+## How Authentication Works
+
+Authentication in Galey Cloud follows these steps:
+
+1. User logs in through the web application
+2. Supabase sets HTTP-only session cookies
+3. All subsequent API requests automatically include these cookies
+4. Each API endpoint validates the session using `supabase.auth.getUser()`
+
+## Authentication Method
+
+### Session Cookies
+
+All API endpoints authenticate requests using session cookies set by Supabase Auth. These cookies are:
+
+- **HTTP-only** - Cannot be accessed via JavaScript
+- **Secure** - Only transmitted over HTTPS in production
+- **Automatic** - Included automatically in same-origin requests
+
+### Required Headers
+
+When making API requests from the same domain, no additional headers are required. The browser automatically includes the session cookies.
+
+For cross-origin requests or API clients, you must include:
+
+```bash
+Credentials: include
+```
+
+This ensures cookies are sent with the request.
+
+## Getting Authenticated
+
+### Via Web Application
+
+The recommended way to authenticate is through the Galey Cloud web application:
+
+1. Navigate to the login page
+2. Sign in with your credentials
+3. Supabase automatically sets session cookies
+4. Make API requests from the authenticated session
+
+### Via API Client
+
+When using tools like curl or Postman:
+
+1. First, authenticate through the web application
+2. Export the session cookies from your browser
+3. Include the cookies in your API requests
+
+#### Example with curl
+
+```bash
+curl -X GET https://your-domain.com/api/photos \
+  -H "Cookie: sb-access-token=YOUR_ACCESS_TOKEN; sb-refresh-token=YOUR_REFRESH_TOKEN"
+```
+
+<Warning>
+Never share your session cookies. They provide full access to your account.
+</Warning>
+
+## Session Validation
+
+Every API endpoint validates the session using this pattern:
+
+```typescript
+const supabase = await createClient()
+const { data: { user } } = await supabase.auth.getUser()
+if (!user) {
+  return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+}
+```
+
+If validation fails, the endpoint returns a 401 Unauthorized error.
+
+## Session Management
+
+### Session Duration
+
+Sessions are managed by Supabase and typically last:
+
+- **Access Token**: 1 hour
+- **Refresh Token**: 30 days
+
+Supabase automatically refreshes the access token using the refresh token.
+
+### Session Expiration
+
+When a session expires, API requests will return:
+
+```json
+{
+  "error": "No autorizado"
+}
+```
+
+HTTP Status: `401 Unauthorized`
+
+To restore access, users must log in again through the web application.
+
+### Logout
+
+To end a session:
+
+1. Call the logout function in the web application
+2. Supabase clears the session cookies
+3. All subsequent API requests will be unauthorized
+
+## User Context
+
+Once authenticated, all API operations are scoped to the authenticated user:
+
+- Photos can only be accessed by their owner
+- Albums are private to each user
+- All database queries include `user_id` filters
+
+### User ID
+
+The authenticated user's ID is automatically extracted from the session:
+
+```typescript
+const { data: { user } } = await supabase.auth.getUser()
+const userId = user.id
+```
+
+This `user_id` is used to filter all queries and ensure data isolation.
+
+## Error Codes
+
+### 401 Unauthorized
+
+Returned when authentication fails:
+
+```json
+{
+  "error": "No autorizado"
+}
+```
+
+**Common causes:**
+- No session cookie present
+- Session has expired
+- Invalid session token
+- User has logged out
+
+**Resolution:**
+- Log in again through the web application
+- Ensure cookies are being sent with the request
+- Check that cookies haven't been cleared
+
+## Security Best Practices
+
+<Warning>
+**Important Security Guidelines:**
+
+- Never expose session cookies in client-side code
+- Don't log or store session cookies in plain text
+- Always use HTTPS in production
+- Implement proper CORS policies
+- Log out when finished using the application
+</Warning>
+
+## Testing Authentication
+
+To verify your authentication is working:
+
+```bash
+curl -X GET https://your-domain.com/api/photos \
+  -H "Cookie: your-session-cookies" \
+  -v
+```
+
+A successful response (200 OK) with your photos list confirms authentication is working.
+
+An error response (401 Unauthorized) indicates authentication failed.
+
+## Next Steps
+
+Once authenticated, you can:
+
+- [Upload and manage photos](/api/photos)
+- [Create and organize albums](/api/albums)

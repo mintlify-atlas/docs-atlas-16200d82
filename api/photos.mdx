@@ -1,0 +1,504 @@
+---
+title: 'Photos API'
+description: 'Endpoints for managing photos'
+---
+
+## List Photos
+
+<CodeGroup>
+```bash GET /api/photos
+curl -X GET https://your-domain.com/api/photos \
+  -H "Cookie: your-session-cookies"
+```
+</CodeGroup>
+
+Retrieves all photos for the authenticated user, ordered by creation date (most recent first).
+
+### Response
+
+<ResponseField name="photos" type="array">
+  Array of photo objects
+
+  <Expandable title="Photo Object">
+    <ResponseField name="id" type="string" required>
+      Unique identifier for the photo
+    </ResponseField>
+
+    <ResponseField name="user_id" type="string" required>
+      ID of the user who owns the photo
+    </ResponseField>
+
+    <ResponseField name="album_id" type="string | null">
+      ID of the album containing this photo, or null if not in an album
+    </ResponseField>
+
+    <ResponseField name="blob_url" type="string" required>
+      Public URL of the photo stored in Vercel Blob
+    </ResponseField>
+
+    <ResponseField name="file_name" type="string" required>
+      Original filename of the uploaded photo
+    </ResponseField>
+
+    <ResponseField name="file_size" type="number" required>
+      File size in bytes
+    </ResponseField>
+
+    <ResponseField name="file_type" type="string" required>
+      MIME type of the file (e.g., "image/jpeg")
+    </ResponseField>
+
+    <ResponseField name="width" type="number | null">
+      Width of the image in pixels, or null if not set
+    </ResponseField>
+
+    <ResponseField name="height" type="number | null">
+      Height of the image in pixels, or null if not set
+    </ResponseField>
+
+    <ResponseField name="created_at" type="string" required>
+      ISO 8601 timestamp when the photo was uploaded
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Response Example
+
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "user_id": "user-123",
+    "album_id": "album-456",
+    "blob_url": "https://blob.vercel-storage.com/photos/user-123/1709550000000-vacation.jpg",
+    "file_name": "vacation.jpg",
+    "file_size": 2458624,
+    "file_type": "image/jpeg",
+    "width": 1920,
+    "height": 1080,
+    "created_at": "2026-03-04T10:30:00.000Z"
+  }
+]
+```
+
+### Error Responses
+
+<ResponseField name="error" type="object">
+  <Expandable title="401 Unauthorized">
+    ```json
+    {
+      "error": "No autorizado"
+    }
+    ```
+    User is not authenticated.
+  </Expandable>
+
+  <Expandable title="500 Internal Server Error">
+    ```json
+    {
+      "error": "Error al obtener fotos"
+    }
+    ```
+    Server error occurred while fetching photos.
+  </Expandable>
+</ResponseField>
+
+---
+
+## Upload Photo
+
+<CodeGroup>
+```bash POST /api/photos/upload
+curl -X POST https://your-domain.com/api/photos/upload \
+  -H "Cookie: your-session-cookies" \
+  -F "file=@/path/to/photo.jpg" \
+  -F "album_id=album-456"
+```
+</CodeGroup>
+
+Uploads a new photo to Vercel Blob storage and creates a database record.
+
+### Request Body
+
+Content-Type: `multipart/form-data`
+
+<ParamField body="file" type="File" required>
+  The image file to upload. Supported formats: JPEG, PNG, GIF, WebP, etc.
+</ParamField>
+
+<ParamField body="album_id" type="string">
+  Optional. ID of the album to add this photo to. If not provided or null, the photo will not be assigned to any album.
+</ParamField>
+
+### Response
+
+Returns the created photo object:
+
+<ResponseField name="photo" type="object">
+  <Expandable title="Photo Object">
+    <ResponseField name="id" type="string" required>
+      Unique identifier for the uploaded photo
+    </ResponseField>
+
+    <ResponseField name="user_id" type="string" required>
+      ID of the user who owns the photo
+    </ResponseField>
+
+    <ResponseField name="album_id" type="string | null">
+      ID of the album, or null if not assigned
+    </ResponseField>
+
+    <ResponseField name="blob_url" type="string" required>
+      Public URL of the uploaded photo
+    </ResponseField>
+
+    <ResponseField name="file_name" type="string" required>
+      Original filename
+    </ResponseField>
+
+    <ResponseField name="file_size" type="number" required>
+      File size in bytes
+    </ResponseField>
+
+    <ResponseField name="file_type" type="string" required>
+      MIME type of the file
+    </ResponseField>
+
+    <ResponseField name="width" type="null">
+      Initially null (can be updated later)
+    </ResponseField>
+
+    <ResponseField name="height" type="null">
+      Initially null (can be updated later)
+    </ResponseField>
+
+    <ResponseField name="created_at" type="string" required>
+      ISO 8601 timestamp when uploaded
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_id": "user-123",
+  "album_id": "album-456",
+  "blob_url": "https://blob.vercel-storage.com/photos/user-123/1709550000000-vacation.jpg",
+  "file_name": "vacation.jpg",
+  "file_size": 2458624,
+  "file_type": "image/jpeg",
+  "width": null,
+  "height": null,
+  "created_at": "2026-03-04T10:30:00.000Z"
+}
+```
+
+### Error Responses
+
+<ResponseField name="error" type="object">
+  <Expandable title="400 Bad Request">
+    ```json
+    {
+      "error": "No se proporciono archivo"
+    }
+    ```
+    No file was provided in the request.
+  </Expandable>
+
+  <Expandable title="401 Unauthorized">
+    ```json
+    {
+      "error": "No autorizado"
+    }
+    ```
+    User is not authenticated.
+  </Expandable>
+
+  <Expandable title="500 Internal Server Error">
+    ```json
+    {
+      "error": "Error al subir"
+    }
+    ```
+    Server error occurred during upload.
+  </Expandable>
+</ResponseField>
+
+---
+
+## Delete Photo
+
+<CodeGroup>
+```bash DELETE /api/photos/delete
+curl -X DELETE https://your-domain.com/api/photos/delete \
+  -H "Cookie: your-session-cookies" \
+  -H "Content-Type: application/json" \
+  -d '{"id": "123e4567-e89b-12d3-a456-426614174000"}'
+```
+</CodeGroup>
+
+Deletes a photo from both Vercel Blob storage and the database.
+
+### Request Body
+
+<ParamField body="id" type="string" required>
+  The unique identifier of the photo to delete
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+### Response
+
+<ResponseField name="success" type="boolean">
+  Returns true when deletion is successful
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "success": true
+}
+```
+
+### Error Responses
+
+<ResponseField name="error" type="object">
+  <Expandable title="400 Bad Request">
+    ```json
+    {
+      "error": "No se proporciono ID"
+    }
+    ```
+    Photo ID was not provided.
+  </Expandable>
+
+  <Expandable title="401 Unauthorized">
+    ```json
+    {
+      "error": "No autorizado"
+    }
+    ```
+    User is not authenticated.
+  </Expandable>
+
+  <Expandable title="404 Not Found">
+    ```json
+    {
+      "error": "Foto no encontrada"
+    }
+    ```
+    Photo with the given ID does not exist or does not belong to the user.
+  </Expandable>
+
+  <Expandable title="500 Internal Server Error">
+    ```json
+    {
+      "error": "Error al eliminar"
+    }
+    ```
+    Server error occurred during deletion.
+  </Expandable>
+</ResponseField>
+
+---
+
+## Move Photo
+
+<CodeGroup>
+```bash PATCH /api/photos/move
+curl -X PATCH https://your-domain.com/api/photos/move \
+  -H "Cookie: your-session-cookies" \
+  -H "Content-Type: application/json" \
+  -d '{"id": "123e4567-e89b-12d3-a456-426614174000", "album_id": "album-789"}'
+```
+</CodeGroup>
+
+Moves a photo to a different album or removes it from an album.
+
+### Request Body
+
+<ParamField body="id" type="string" required>
+  The unique identifier of the photo to move
+</ParamField>
+
+<ParamField body="album_id" type="string | null">
+  The ID of the destination album. Set to `null` or omit to remove the photo from all albums.
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "album_id": "album-789"
+}
+```
+
+To remove from album:
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "album_id": null
+}
+```
+
+### Response
+
+Returns the updated photo object:
+
+<ResponseField name="photo" type="object">
+  The complete photo object with updated album_id
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_id": "user-123",
+  "album_id": "album-789",
+  "blob_url": "https://blob.vercel-storage.com/photos/user-123/1709550000000-vacation.jpg",
+  "file_name": "vacation.jpg",
+  "file_size": 2458624,
+  "file_type": "image/jpeg",
+  "width": 1920,
+  "height": 1080,
+  "created_at": "2026-03-04T10:30:00.000Z"
+}
+```
+
+### Error Responses
+
+<ResponseField name="error" type="object">
+  <Expandable title="400 Bad Request">
+    ```json
+    {
+      "error": "No se proporciono ID"
+    }
+    ```
+    Photo ID was not provided.
+  </Expandable>
+
+  <Expandable title="401 Unauthorized">
+    ```json
+    {
+      "error": "No autorizado"
+    }
+    ```
+    User is not authenticated.
+  </Expandable>
+
+  <Expandable title="500 Internal Server Error">
+    ```json
+    {
+      "error": "Error al mover foto"
+    }
+    ```
+    Server error occurred while moving the photo.
+  </Expandable>
+</ResponseField>
+
+---
+
+## Update Photo Dimensions
+
+<CodeGroup>
+```bash PATCH /api/photos/dimensions
+curl -X PATCH https://your-domain.com/api/photos/dimensions \
+  -H "Cookie: your-session-cookies" \
+  -H "Content-Type: application/json" \
+  -d '{"id": "123e4567-e89b-12d3-a456-426614174000", "width": 1920, "height": 1080}'
+```
+</CodeGroup>
+
+Updates the width and height metadata for a photo.
+
+### Request Body
+
+<ParamField body="id" type="string" required>
+  The unique identifier of the photo to update
+</ParamField>
+
+<ParamField body="width" type="number">
+  Width of the image in pixels
+</ParamField>
+
+<ParamField body="height" type="number">
+  Height of the image in pixels
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "width": 1920,
+  "height": 1080
+}
+```
+
+### Response
+
+Returns the updated photo object:
+
+<ResponseField name="photo" type="object">
+  The complete photo object with updated dimensions
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "user_id": "user-123",
+  "album_id": "album-456",
+  "blob_url": "https://blob.vercel-storage.com/photos/user-123/1709550000000-vacation.jpg",
+  "file_name": "vacation.jpg",
+  "file_size": 2458624,
+  "file_type": "image/jpeg",
+  "width": 1920,
+  "height": 1080,
+  "created_at": "2026-03-04T10:30:00.000Z"
+}
+```
+
+### Error Responses
+
+<ResponseField name="error" type="object">
+  <Expandable title="400 Bad Request">
+    ```json
+    {
+      "error": "No se proporciono ID"
+    }
+    ```
+    Photo ID was not provided.
+  </Expandable>
+
+  <Expandable title="401 Unauthorized">
+    ```json
+    {
+      "error": "No autorizado"
+    }
+    ```
+    User is not authenticated.
+  </Expandable>
+
+  <Expandable title="500 Internal Server Error">
+    ```json
+    {
+      "error": "Error al actualizar dimensiones"
+    }
+    ```
+    Server error occurred while updating dimensions.
+  </Expandable>
+</ResponseField>
